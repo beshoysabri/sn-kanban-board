@@ -1,9 +1,9 @@
 {
-  "identifier": "com.beshoysabri.sn-super-kanban-editor.dev",
-  "name": "Super Kanban Editor (Dev)",
+  "identifier": "com.beshoysabri.sn-kanban-board.dev",
+  "name": "Kanban Board (Dev)",
   "content_type": "SN|Component",
   "area": "editor-editor",
   "version": "1.0.0",
-  "description": "Super Kanban Editor - Development Version",
+  "description": "Kanban Board - Development Version",
   "url": "http://localhost:5173/index.html"
 }
