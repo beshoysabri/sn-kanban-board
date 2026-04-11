@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { formatDueDate } from '../lib/dates';
 import { LABEL_COLORS, getColorHex } from '../lib/colors';
+import { Linkify } from './shared/Linkify';
 import type { KanbanCard } from '../types/kanban';
 
 interface Props {
@@ -114,6 +115,7 @@ export function CardModal({ card, onSave, onDelete, onClose }: Props) {
           <div className="modal-section">
             <label className="modal-label">Color</label>
             <div className="color-picker">
+              <div className="color-preview" style={{ background: getColorHex(labelColor) || '#888' }} title={labelColor || 'No color'} />
               <button
                 className={`color-swatch no-color ${!labelColor ? 'selected' : ''}`}
                 onClick={() => setLabelColor('')}
@@ -122,7 +124,7 @@ export function CardModal({ card, onSave, onDelete, onClose }: Props) {
               {LABEL_COLORS.map((c) => (
                 <button
                   key={c.name}
-                  className={`color-swatch ${labelColor === c.name ? 'selected' : ''}`}
+                  className={`color-swatch ${labelColor.toLowerCase() === c.name.toLowerCase() ? 'selected' : ''}`}
                   style={{ backgroundColor: c.hex }}
                   onClick={() => setLabelColor(c.name)}
                   title={c.name}
@@ -192,7 +194,7 @@ export function CardModal({ card, onSave, onDelete, onClose }: Props) {
               )}
               {comments.map((comment, i) => (
                 <div key={i} className="comment-item">
-                  <span className="comment-text">{comment}</span>
+                  <span className="comment-text"><Linkify>{comment}</Linkify></span>
                   <button
                     className="comment-delete-btn"
                     onClick={() => deleteComment(i)}

@@ -9,7 +9,7 @@ export interface DueDateInfo {
 }
 
 export function formatDueDate(dateStr: string): DueDateInfo | null {
-  if (!dateStr) return null;
+  if (!dateStr || !dateStr.trim()) return null;
 
   const due = new Date(dateStr + 'T00:00:00');
   if (isNaN(due.getTime())) return null;

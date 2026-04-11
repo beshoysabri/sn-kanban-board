@@ -1,7 +1,8 @@
 import { useState, memo } from 'react';
 import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-pangea/dnd';
-import { getColorHex } from '../lib/colors';
+import { getColorHex, hexToRgba } from '../lib/colors';
 import { formatDueDate } from '../lib/dates';
+import { Linkify } from './shared/Linkify';
 import type { KanbanLane, KanbanCard } from '../types/kanban';
 
 interface Props {
@@ -104,9 +105,17 @@ const ListGroup = memo(function ListGroup({
         >
           <polyline points="6 9 12 15 18 9" />
         </svg>
-        {laneColor && <span className="lane-color-dot" style={{ backgroundColor: laneColor }} />}
+        <span className="kb-lane-dot" style={{ backgroundColor: laneColor || '#a1a1aa' }} />
         <span className="list-group-title">{lane.title}</span>
-        <span className="list-group-count">{lane.cards.length}</span>
+        <span
+          className="kb-lane-count"
+          style={laneColor ? {
+            background: hexToRgba(laneColor, 0.15),
+            color: laneColor,
+          } : undefined}
+        >
+          {lane.cards.length}
+        </span>
       </div>
       {!collapsed && (
         <Droppable droppableId={lane.id} type="CARD">
@@ -194,7 +203,7 @@ const ListCard = memo(function ListCard({
           <div className="list-card-content">
             <div className="list-card-main">
               <span className="list-card-title">{card.title}</span>
-              {card.description && <span className="list-card-desc">{card.description}</span>}
+              {card.description && <span className="list-card-desc"><Linkify>{card.description}</Linkify></span>}
             </div>
             <div className="list-card-meta">
               {card.label && <span className="list-card-label">{card.label}</span>}

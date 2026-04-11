@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, memo } from 'react';
 import { Droppable } from '@hello-pangea/dnd';
 import { KanbanCardComponent } from './KanbanCard';
-import { getColorHex, LABEL_COLORS } from '../lib/colors';
+import { getColorHex, hexToRgba, LABEL_COLORS } from '../lib/colors';
 import type { KanbanLane as LaneType, KanbanCard } from '../types/kanban';
 
 interface Props {
@@ -90,10 +90,11 @@ export const KanbanLaneComponent = memo(function KanbanLaneComponent({
       className={`kanban-lane ${laneColor ? 'lane-tinted' : ''}`}
       style={laneColor ? { '--lane-accent': laneColor } as React.CSSProperties : undefined}
     >
-      <div className="lane-header">
-        {laneColor && (
-          <span className="lane-color-dot" style={{ backgroundColor: laneColor }} />
-        )}
+      <div
+        className="lane-header"
+        style={laneColor ? { background: hexToRgba(laneColor, 0.08) } : undefined}
+      >
+        <span className="kb-lane-dot" style={{ backgroundColor: laneColor || '#a1a1aa' }} />
         {isEditing ? (
           <input
             ref={inputRef}
@@ -112,7 +113,15 @@ export const KanbanLaneComponent = memo(function KanbanLaneComponent({
         ) : (
           <h3 className="lane-title" onDoubleClick={() => setIsEditing(true)}>
             {lane.title}
-            <span className="lane-count">{lane.cards.length}</span>
+            <span
+              className="kb-lane-count"
+              style={laneColor ? {
+                background: hexToRgba(laneColor, 0.15),
+                color: laneColor,
+              } : undefined}
+            >
+              {lane.cards.length}
+            </span>
           </h3>
         )}
         <div className="lane-actions" ref={menuRef}>
@@ -156,6 +165,7 @@ export const KanbanLaneComponent = memo(function KanbanLaneComponent({
               </button>
               {showColorPicker && (
                 <div className="lane-color-picker">
+                  <div className="color-preview" style={{ background: laneColor || '#888' }} title={lane.color || 'No color'} />
                   <button
                     className={`color-swatch-sm no-color ${!lane.color ? 'selected' : ''}`}
                     onClick={() => {
@@ -168,7 +178,7 @@ export const KanbanLaneComponent = memo(function KanbanLaneComponent({
                   {LABEL_COLORS.map((c) => (
                     <button
                       key={c.name}
-                      className={`color-swatch-sm ${lane.color === c.name ? 'selected' : ''}`}
+                      className={`color-swatch-sm ${lane.color.toLowerCase() === c.name.toLowerCase() ? 'selected' : ''}`}
                       style={{ backgroundColor: c.hex }}
                       onClick={() => {
                         onSetLaneColor(lane.id, c.name);

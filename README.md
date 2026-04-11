@@ -1,8 +1,8 @@
-# Super Kanban Editor for Standard Notes
+# Kanban Board for Standard Notes
 
 A modern, fully-featured Kanban board editor plugin for [Standard Notes](https://standardnotes.com). Organize your notes as Kanban boards with drag-and-drop, color labels, due dates, comments, and full theme support.
 
-**Live:** [beshoysabri.github.io/sn-super-kanban-editor](https://beshoysabri.github.io/sn-super-kanban-editor/)
+**Live:** [beshoysabri.github.io/sn-kanban-board](https://beshoysabri.github.io/sn-kanban-board/)
 
 ---
 
@@ -60,10 +60,10 @@ A modern, fully-featured Kanban board editor plugin for [Standard Notes](https:/
 2. Go to **Preferences** > **General** > **Advanced Settings** > **Install Custom Plugin**
 3. Paste the following URL:
    ```
-   https://beshoysabri.github.io/sn-super-kanban-editor/ext.json
+   https://beshoysabri.github.io/sn-kanban-board/ext.json
    ```
 4. Click **Install**
-5. Open any note, click the **Editor** selector, and choose **Super Kanban Editor**
+5. Open any note, click the **Editor** selector, and choose **Kanban Board**
 
 ### From Source
 
@@ -84,8 +84,8 @@ A modern, fully-featured Kanban board editor plugin for [Standard Notes](https:/
 ### Setup
 
 ```bash
-git clone https://github.com/beshoysabri/sn-super-kanban-editor.git
-cd sn-super-kanban-editor
+git clone https://github.com/beshoysabri/sn-kanban-board.git
+cd sn-kanban-board
 npm install
 ```
 

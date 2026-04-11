@@ -169,8 +169,8 @@ export function createDefaultBoard(): KanbanBoard {
     meta: { ...DEFAULT_META },
     lanes: [
       { id: uuid(), title: 'To Do', color: '', cards: [] },
-      { id: uuid(), title: 'In Progress', color: 'blue', cards: [] },
-      { id: uuid(), title: 'Done', color: 'green', cards: [] },
+      { id: uuid(), title: 'In Progress', color: 'Ocean', cards: [] },
+      { id: uuid(), title: 'Done', color: 'Sage', cards: [] },
     ],
   };
 }

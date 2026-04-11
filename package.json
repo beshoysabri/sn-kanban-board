@@ -1,14 +1,14 @@
 {
-  "name": "sn-super-kanban-editor",
+  "name": "sn-kanban-board",
   "private": true,
   "version": "1.0.0",
   "type": "module",
   "description": "A modern Kanban board editor for Standard Notes with drag-and-drop, color labels, due dates, and comments",
   "repository": {
     "type": "git",
-    "url": "https://github.com/beshoysabri/sn-super-kanban-editor.git"
+    "url": "https://github.com/beshoysabri/sn-kanban-board.git"
   },
-  "homepage": "https://beshoysabri.github.io/sn-super-kanban-editor/",
+  "homepage": "https://beshoysabri.github.io/sn-kanban-board/",
   "keywords": [
     "Standard Notes",
     "Kanban Board",

@@ -2,6 +2,7 @@ import { memo } from 'react';
 import { Draggable } from '@hello-pangea/dnd';
 import { formatDueDate } from '../lib/dates';
 import { getColorHex } from '../lib/colors';
+import { Linkify } from './shared/Linkify';
 import type { KanbanCard as CardType } from '../types/kanban';
 
 interface Props {
@@ -41,7 +42,7 @@ export const KanbanCardComponent = memo(function KanbanCardComponent({ card, ind
             <div className="card-title">{card.title}</div>
 
             {card.description && (
-              <div className="card-description">{card.description}</div>
+              <div className="card-description"><Linkify>{card.description}</Linkify></div>
             )}
 
             {(dateInfo || (card.comments && card.comments.length > 0)) && (

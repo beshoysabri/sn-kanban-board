@@ -87,7 +87,7 @@ function App() {
         snApi.destroy();
       };
     } else {
-      const saved = localStorage.getItem('sn-super-kanban-editor');
+      const saved = localStorage.getItem('sn-kanban-board');
       if (saved) {
         try {
           const { board: parsed } = parseMarkdown(saved);
@@ -111,7 +111,7 @@ function App() {
           saveTimeoutRef.current = null;
         }, 300);
       } else {
-        localStorage.setItem('sn-super-kanban-editor', markdown);
+        localStorage.setItem('sn-kanban-board', markdown);
       }
     },
     []
