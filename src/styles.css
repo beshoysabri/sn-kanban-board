@@ -1605,7 +1605,14 @@ body.sn-embedded {
   display: flex;
   align-items: center;
   gap: 6px;
-  flex-shrink: 0;
+  flex-shrink: 1;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.kb-header-controls::-webkit-scrollbar {
+  display: none;
 }
 
 .kb-control-select {
@@ -1624,6 +1631,12 @@ body.sn-embedded {
 .kb-control-select:focus {
   border-color: var(--kb-accent);
   color: var(--kb-fg);
+}
+
+.kb-control-select.active-filter {
+  border-color: var(--kb-accent);
+  color: var(--kb-accent);
+  background: color-mix(in srgb, var(--kb-accent) 8%, var(--kb-card-bg));
 }
 
 .kb-control-sep {

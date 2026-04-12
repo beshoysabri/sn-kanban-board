@@ -60,7 +60,16 @@ export function SchemaEditor({ board, onUpdateBoard, onClose }: SchemaEditorProp
   const [tab, setTab] = useState<Tab>('statuses');
   const [draft, setDraft] = useState(() => structuredClone(board));
 
-  const handleSave = () => { onUpdateBoard(draft); onClose(); };
+  const handleSave = () => {
+    // Auto-name empty items before saving
+    const cleaned = structuredClone(draft);
+    cleaned.statuses.forEach((s, i) => { if (!s.name.trim()) s.name = `Status ${i + 1}`; });
+    cleaned.groups.forEach((g, i) => { if (!g.name.trim()) g.name = `Group ${i + 1}`; });
+    cleaned.subGroups.forEach((sg, i) => { if (!sg.name.trim()) sg.name = `Sub-Group ${i + 1}`; });
+    cleaned.fields.forEach((f, i) => { if (!f.name.trim()) f.name = `Field ${i + 1}`; });
+    onUpdateBoard(cleaned);
+    onClose();
+  };
 
   /* ---- Statuses ---- */
   const updateStatus = (index: number, field: string, value: string | number) => {

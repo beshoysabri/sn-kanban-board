@@ -108,12 +108,12 @@ export const BoardHeader = memo(function BoardHeader({
             <option value="status">Swim: Status</option>
           </select>
           <span className="kb-control-sep" />
-          <select className="kb-control-select form-select" title="Filter by status"
+          <select className={`kb-control-select form-select ${filterStatus ? 'active-filter' : ''}`} title="Filter by status"
             value={filterStatus} onChange={e => onFilterStatusChange(e.target.value)}>
             <option value="">All Statuses</option>
             {board.statuses.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
           </select>
-          <select className="kb-control-select form-select" title="Filter by priority"
+          <select className={`kb-control-select form-select ${filterPriority ? 'active-filter' : ''}`} title="Filter by priority"
             value={filterPriority} onChange={e => onFilterPriorityChange(e.target.value)}>
             <option value="">All Priorities</option>
             <option value="critical">Critical</option>

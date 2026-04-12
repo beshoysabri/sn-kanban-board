@@ -224,16 +224,19 @@ export function boardToMarkdown(board: KanbanBoard): string {
   }
 
   for (const s of board.statuses) {
+    if (!s.name.trim()) continue;
     let tags = '';
     if (s.color) tags += ` [color:${s.color}]`;
     if (s.wipLimit > 0) tags += ` [wip:${s.wipLimit}]`;
     parts.push(`@status: ${s.name}${tags}`);
   }
   for (const g of board.groups) {
+    if (!g.name.trim()) continue;
     const tag = g.color ? ` [color:${g.color}]` : '';
     parts.push(`@group: ${g.name}${tag}`);
   }
   for (const sg of board.subGroups) {
+    if (!sg.name.trim()) continue;
     const tag = sg.color ? ` [color:${sg.color}]` : '';
     parts.push(`@subgroup: ${sg.name}${tag}`);
   }

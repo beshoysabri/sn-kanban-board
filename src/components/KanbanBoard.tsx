@@ -432,7 +432,8 @@ export function KanbanBoard({ board, onChange }: Props) {
                           <Droppable droppableId={`${col.id}__${sg.id}`} type="CARD">
                             {(provided, snapshot) => (
                               <div ref={provided.innerRef} {...provided.droppableProps}
-                                className={`lane-cards ${snapshot.isDraggingOver ? 'drag-over' : ''}`}>
+                                className={`lane-cards ${snapshot.isDraggingOver ? 'drag-over' : ''}`}
+                                style={{ minHeight: 40 }}>
                                 {cellCards.map((card, idx) => (
                                   <KanbanCardComponent key={card.id} card={card} index={idx} onClick={setEditingCard} />
                                 ))}
