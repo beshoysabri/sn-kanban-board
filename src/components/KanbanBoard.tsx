@@ -155,7 +155,12 @@ export function KanbanBoard({ board, onChange }: Props) {
       }
 
       // Card drag — handle grid droppable IDs (col__subgroup format)
-      const field = getColumnField();
+      // Use current view's groupBy to determine which card field to update
+      const viewMode = cur.meta.viewMode;
+      const groupBy = viewMode === 'list' ? (cur.meta.listGroupBy || 'status')
+        : viewMode === 'table' ? (cur.meta.tableGroupBy || 'status')
+        : (cur.meta.boardGroupBy || 'status');
+      const field: 'statusId' | 'groupId' = groupBy === 'group' ? 'groupId' : 'statusId';
       const cards = [...cur.cards];
 
       const parseDroppableId = (id: string) => {
@@ -215,19 +220,30 @@ export function KanbanBoard({ board, onChange }: Props) {
     (columnId: string, title: string, subGroupId?: string) => {
       const cur = boardRef.current;
       const card = createNewCard(title);
-      const field = getColumnField();
-      card[field] = columnId;
+      // Determine which field the columnId refers to based on the CURRENT view's groupBy
+      const viewMode = cur.meta.viewMode;
+      const groupBy = viewMode === 'list' ? (cur.meta.listGroupBy || 'status')
+        : viewMode === 'table' ? (cur.meta.tableGroupBy || 'status')
+        : (cur.meta.boardGroupBy || 'status');
+      if (groupBy === 'group') card.groupId = columnId;
+      else card.statusId = columnId;
       // Set sub-group if provided
       if (subGroupId) {
-        const sgBy = cur.meta.boardSubGroupBy || cur.meta.listSubGroupBy || '';
+        const sgBy = viewMode === 'list' ? (cur.meta.listSubGroupBy || '')
+          : viewMode === 'table' ? (cur.meta.tableSubGroupBy || '')
+          : (cur.meta.boardSubGroupBy || '');
         if (sgBy === 'group') card.groupId = subGroupId;
         else if (sgBy === 'subGroup') card.subGroupId = subGroupId;
         else if (sgBy === 'status') card.statusId = subGroupId;
       }
+      // Ensure card always has a statusId if statuses exist
+      if (!card.statusId && cur.statuses.length > 0) {
+        card.statusId = cur.statuses[0].id;
+      }
       onChange({ ...cur, cards: [...cur.cards, card] });
       showToast('Card created');
     },
-    [onChange, showToast, getColumnField]
+    [onChange, showToast]
   );
 
   const handleQuickAddCard = useCallback(() => {
