@@ -459,6 +459,7 @@ body.sn-embedded {
 .kanban-card:hover {
   border-color: color-mix(in srgb, var(--kb-accent) 40%, transparent);
   box-shadow: var(--kb-shadow-md);
+  transform: translateY(-1px);
 }
 
 .kanban-card.dragging {
@@ -869,12 +870,12 @@ body.sn-embedded {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.6px;
   color: var(--kb-muted);
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 .modal-textarea {
@@ -1151,18 +1152,19 @@ body.sn-embedded {
 .delete-card-btn {
   padding: 7px 14px;
   background: transparent;
-  color: var(--kb-danger);
-  border: 1px solid var(--kb-danger);
+  color: var(--kb-muted);
+  border: 1px solid var(--kb-border);
   border-radius: var(--kb-radius-sm);
-  font-size: 13px;
+  font-size: 12px;
   font-family: inherit;
   cursor: pointer;
   transition: all var(--kb-transition);
 }
 
 .delete-card-btn:hover {
-  background: var(--kb-danger);
-  color: #fff;
+  background: color-mix(in srgb, var(--kb-danger) 10%, transparent);
+  color: var(--kb-danger);
+  border-color: var(--kb-danger);
 }
 
 .confirm-delete {
@@ -1429,10 +1431,16 @@ body.sn-embedded {
 
 .kb-sidebar-card-item {
   padding-left: 28px;
+  cursor: default;
+}
+
+.kb-sidebar-card-item:hover {
+  background: var(--kb-card-hover);
 }
 
 .kb-sidebar-card-item .kb-sidebar-name {
   font-size: 12px;
+  color: var(--kb-muted);
 }
 
 .kb-sidebar-footer {
@@ -1590,6 +1598,7 @@ body.sn-embedded {
 .kb-view-btn.active {
   background: var(--kb-accent);
   color: #fff;
+  font-weight: 600;
 }
 
 .kb-view-btn:not(.active):hover {
@@ -1616,7 +1625,7 @@ body.sn-embedded {
 }
 
 .kb-control-select {
-  padding: 4px 24px 4px 8px;
+  padding: 5px 24px 5px 8px;
   border: 1px solid var(--kb-border);
   border-radius: var(--kb-radius-xs);
   background: var(--kb-card-bg);
@@ -1624,7 +1633,8 @@ body.sn-embedded {
   font-size: 11px;
   font-family: inherit;
   cursor: pointer;
-  transition: border-color var(--kb-transition);
+  transition: all var(--kb-transition);
+  white-space: nowrap;
 }
 
 .kb-control-select:hover,
@@ -1761,7 +1771,27 @@ body.sn-embedded {
   z-index: 3000;
   pointer-events: none;
   box-shadow: var(--kb-shadow-lg);
-  animation: toastIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  animation: toastIn 0.3s cubic-bezier(0.16, 1, 0.3, 1), toastOut 0.3s ease 1.7s forwards;
+  overflow: hidden;
+}
+
+.kb-toast::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 2px;
+  background: var(--kb-accent);
+  animation: toastProgress 2s linear;
+}
+
+@keyframes toastProgress {
+  from { width: 100%; }
+  to { width: 0%; }
+}
+
+@keyframes toastOut {
+  to { opacity: 0; transform: translateX(-50%) translateY(10px); }
 }
 
 /* ========================================
@@ -1897,9 +1927,10 @@ body.sn-embedded {
 .color-preview {
   width: 24px;
   height: 24px;
-  border-radius: 4px;
+  border-radius: 6px;
   border: 2px solid var(--kb-border);
   flex-shrink: 0;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.1);
 }
 
 /* ========================================
@@ -1966,11 +1997,11 @@ body.sn-embedded {
 }
 
 .list-empty-group {
-  padding: 12px;
-  font-size: 13px;
+  padding: 16px 12px;
+  font-size: 12px;
   color: var(--kb-muted);
-  opacity: 0.5;
-  font-style: italic;
+  opacity: 0.4;
+  text-align: center;
   border: 1px solid var(--kb-border);
   border-top: none;
 }
@@ -1988,6 +2019,8 @@ body.sn-embedded {
 
 .list-card:hover {
   background: var(--kb-card-hover);
+  border-color: color-mix(in srgb, var(--kb-accent) 30%, transparent);
+  box-shadow: var(--kb-shadow);
 }
 
 .list-card-tinted {
@@ -2123,7 +2156,8 @@ body.sn-embedded {
 
 .list-add-btn:hover {
   color: var(--kb-accent);
-  background: color-mix(in srgb, var(--kb-accent) 4%, transparent);
+  background: color-mix(in srgb, var(--kb-accent) 6%, transparent);
+  border-color: color-mix(in srgb, var(--kb-accent) 20%, var(--kb-border));
 }
 
 /* List view drag-and-drop */
@@ -2877,6 +2911,7 @@ body.sn-embedded {
 
 .kb-table tbody tr:hover {
   background: var(--kb-card-hover);
+  box-shadow: inset 3px 0 0 var(--kb-accent);
 }
 
 .kb-table tbody tr:nth-child(even) {
