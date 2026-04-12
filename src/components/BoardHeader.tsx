@@ -11,6 +11,14 @@ interface Props {
   onAddCard: () => void;
   searchQuery: string;
   onSearchChange: (q: string) => void;
+  filterStatus: string;
+  onFilterStatusChange: (v: string) => void;
+  filterPriority: string;
+  onFilterPriorityChange: (v: string) => void;
+  sortField: string;
+  onSortFieldChange: (v: string) => void;
+  sortDir: 'asc' | 'desc';
+  onSortDirChange: (v: 'asc' | 'desc') => void;
 }
 
 const VIEW_ICONS: { key: ViewMode; label: string; icon: React.ReactNode }[] = [
@@ -21,7 +29,9 @@ const VIEW_ICONS: { key: ViewMode; label: string; icon: React.ReactNode }[] = [
 ];
 
 export const BoardHeader = memo(function BoardHeader({
-  board, onUpdateMeta, onToggleSidebar, onShowShortcuts, onOpenSchemaEditor, onAddCard, searchQuery, onSearchChange,
+  board, onUpdateMeta, onToggleSidebar, onShowShortcuts, onOpenSchemaEditor, onAddCard,
+  searchQuery, onSearchChange, filterStatus, onFilterStatusChange, filterPriority, onFilterPriorityChange,
+  sortField, onSortFieldChange, sortDir, onSortDirChange,
 }: Props) {
   const { meta } = board;
   const [editing, setEditing] = useState(false);
@@ -82,7 +92,7 @@ export const BoardHeader = memo(function BoardHeader({
         )}
       </div>
 
-      {/* View-specific group-by / sub-group-by / sort controls */}
+      {/* View-specific controls: group-by, sub-group-by, filter, sort */}
       {!editing && meta.viewMode !== 'analytics' && (
         <div className="kb-header-controls">
           <select className="kb-control-select form-select" title="Group by"
@@ -97,6 +107,35 @@ export const BoardHeader = memo(function BoardHeader({
             <option value="subGroup">Swim: Sub-Group</option>
             <option value="status">Swim: Status</option>
           </select>
+          <span className="kb-control-sep" />
+          <select className="kb-control-select form-select" title="Filter by status"
+            value={filterStatus} onChange={e => onFilterStatusChange(e.target.value)}>
+            <option value="">All Statuses</option>
+            {board.statuses.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+          </select>
+          <select className="kb-control-select form-select" title="Filter by priority"
+            value={filterPriority} onChange={e => onFilterPriorityChange(e.target.value)}>
+            <option value="">All Priorities</option>
+            <option value="critical">Critical</option>
+            <option value="high">High</option>
+            <option value="medium">Medium</option>
+            <option value="low">Low</option>
+          </select>
+          <span className="kb-control-sep" />
+          <select className="kb-control-select form-select" title="Sort by"
+            value={sortField} onChange={e => onSortFieldChange(e.target.value)}>
+            <option value="">No Sort</option>
+            <option value="title">Sort: Title</option>
+            <option value="priority">Sort: Priority</option>
+            <option value="dueDate">Sort: Due Date</option>
+            <option value="label">Sort: Label</option>
+          </select>
+          {sortField && (
+            <button className="kb-control-btn" onClick={() => onSortDirChange(sortDir === 'asc' ? 'desc' : 'asc')}
+              title={sortDir === 'asc' ? 'Ascending' : 'Descending'}>
+              {sortDir === 'asc' ? '\u25B2' : '\u25BC'}
+            </button>
+          )}
         </div>
       )}
 

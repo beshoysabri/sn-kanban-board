@@ -27,6 +27,10 @@ export function KanbanBoard({ board, onChange }: Props) {
   const [showSchemaEditor, setShowSchemaEditor] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [filterStatus, setFilterStatus] = useState('');
+  const [filterPriority, setFilterPriority] = useState('');
+  const [sortField, setSortField] = useState('');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
   const boardRef = useRef(board);
   boardRef.current = board;
 
@@ -75,15 +79,30 @@ export function KanbanBoard({ board, onChange }: Props) {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [showShortcuts]);
 
-  // --- Search filtering ---
-  const filteredCards = searchQuery.trim()
-    ? board.cards.filter(c => {
-        const q = searchQuery.toLowerCase();
-        return c.title.toLowerCase().includes(q)
-          || c.description.toLowerCase().includes(q)
-          || c.label.toLowerCase().includes(q);
-      })
-    : board.cards;
+  // --- Search + Filter + Sort ---
+  let filteredCards = board.cards;
+  if (searchQuery.trim()) {
+    const q = searchQuery.toLowerCase();
+    filteredCards = filteredCards.filter(c =>
+      c.title.toLowerCase().includes(q) || c.description.toLowerCase().includes(q) || c.label.toLowerCase().includes(q)
+    );
+  }
+  if (filterStatus) filteredCards = filteredCards.filter(c => c.statusId === filterStatus);
+  if (filterPriority) filteredCards = filteredCards.filter(c => c.priority === filterPriority);
+  if (sortField) {
+    const dir = sortDir === 'asc' ? 1 : -1;
+    filteredCards = [...filteredCards].sort((a, b) => {
+      let cmp = 0;
+      if (sortField === 'title') cmp = a.title.localeCompare(b.title);
+      else if (sortField === 'priority') {
+        const ord: Record<string, number> = { critical: 4, high: 3, medium: 2, low: 1, '': 0 };
+        cmp = (ord[a.priority] || 0) - (ord[b.priority] || 0);
+      }
+      else if (sortField === 'dueDate') cmp = (a.dueDate || 'z').localeCompare(b.dueDate || 'z');
+      else if (sortField === 'label') cmp = a.label.localeCompare(b.label);
+      return cmp * dir;
+    });
+  }
 
   // --- Helpers ---
   const getColumns = useCallback(() => {
@@ -135,12 +154,23 @@ export function KanbanBoard({ board, onChange }: Props) {
         return;
       }
 
-      // Card drag
+      // Card drag — handle grid droppable IDs (col__subgroup format)
       const field = getColumnField();
       const cards = [...cur.cards];
 
+      const parseDroppableId = (id: string) => {
+        if (id.includes('__')) {
+          const [colId, sgId] = id.split('__');
+          return { colId, sgId: sgId === 'ungrouped' ? '' : sgId };
+        }
+        return { colId: id, sgId: null as string | null };
+      };
+
+      const srcParsed = parseDroppableId(source.droppableId);
+      const destParsed = parseDroppableId(destination.droppableId);
+
       // Find the card in the source column's ordered cards
-      const srcCards = cards.filter(c => c[field] === source.droppableId);
+      const srcCards = cards.filter(c => c[field] === srcParsed.colId);
       const card = srcCards[source.index];
       if (!card) return;
 
@@ -150,12 +180,19 @@ export function KanbanBoard({ board, onChange }: Props) {
 
       // Update column assignment if cross-column
       const updatedCard = { ...card };
-      if (source.droppableId !== destination.droppableId) {
-        updatedCard[field] = destination.droppableId;
+      if (srcParsed.colId !== destParsed.colId) {
+        updatedCard[field] = destParsed.colId;
+      }
+      // Update sub-group if grid drag changed sub-group
+      if (destParsed.sgId !== null) {
+        const subGroupBy = cur.meta.boardSubGroupBy;
+        if (subGroupBy === 'group') updatedCard.groupId = destParsed.sgId;
+        else if (subGroupBy === 'subGroup') updatedCard.subGroupId = destParsed.sgId;
+        else if (subGroupBy === 'status') updatedCard.statusId = destParsed.sgId;
       }
 
       // Find insertion position in flat array
-      const destCards = cards.filter(c => c[field] === destination.droppableId);
+      const destCards = cards.filter(c => c[field] === destParsed.colId);
       if (destination.index >= destCards.length) {
         // Append after last card in destination column
         const lastDestCard = destCards[destCards.length - 1];
@@ -168,7 +205,7 @@ export function KanbanBoard({ board, onChange }: Props) {
       }
 
       onChange({ ...cur, cards });
-      if (source.droppableId !== destination.droppableId) showToast('Card moved');
+      if (srcParsed.colId !== destParsed.colId || (destParsed.sgId !== null && srcParsed.sgId !== destParsed.sgId)) showToast('Card moved');
     },
     [onChange, showToast, getColumnField]
   );
@@ -323,7 +360,7 @@ export function KanbanBoard({ board, onChange }: Props) {
   const viewBoard = searchQuery.trim() ? { ...board, cards: filteredCards } : board;
 
   const renderView = () => {
-    if (board.meta.viewMode === 'analytics') return <AnalyticsView board={board} />;
+    if (board.meta.viewMode === 'analytics') return <AnalyticsView board={viewBoard} />;
     if (board.meta.viewMode === 'table') {
       if (TableView) return <TableView board={viewBoard} onCardClick={setEditingCard} onUpdateCard={handleSaveCard} onMoveCard={handleMoveCard} />;
       return <div className="loading"><div className="loading-spinner" /></div>;
@@ -344,6 +381,7 @@ export function KanbanBoard({ board, onChange }: Props) {
     let getSubGroupField: (c: KanbanCard) => string = () => '';
     if (subGroupBy === 'group') { subGroupDefs = board.groups; getSubGroupField = c => c.groupId; }
     else if (subGroupBy === 'subGroup') { subGroupDefs = board.subGroups; getSubGroupField = c => c.subGroupId; }
+    else if (subGroupBy === 'status') { subGroupDefs = board.statuses.map(s => ({ id: s.id, name: s.name, color: s.color })); getSubGroupField = c => c.statusId; }
 
     const hasGridLayout = subGroupBy && subGroupDefs.length > 0;
 
@@ -499,6 +537,14 @@ export function KanbanBoard({ board, onChange }: Props) {
         onAddCard={handleQuickAddCard}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
+        filterStatus={filterStatus}
+        onFilterStatusChange={setFilterStatus}
+        filterPriority={filterPriority}
+        onFilterPriorityChange={setFilterPriority}
+        sortField={sortField}
+        onSortFieldChange={setSortField}
+        sortDir={sortDir}
+        onSortDirChange={setSortDir}
       />
 
       <div className="kb-body">

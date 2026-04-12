@@ -1,4 +1,5 @@
 import type { KanbanBoard } from '../types/kanban.ts';
+import { boardToMarkdown } from './markdown.ts';
 
 function downloadFile(content: string, filename: string, mimeType: string) {
   const blob = new Blob([content], { type: mimeType });
@@ -13,19 +14,27 @@ function downloadFile(content: string, filename: string, mimeType: string) {
 }
 
 export function exportCSV(board: KanbanBoard) {
-  const rows = [['Status', 'Group', 'Title', 'Description', 'Label', 'Priority', 'Due Date', 'Comments']];
+  const customFieldNames = board.fields.map(f => f.name);
+  const rows = [['Status', 'Group', 'Sub-Group', 'Title', 'Description', 'Label', 'Priority', 'Due Date', 'Checklist', 'Comments', ...customFieldNames]];
   for (const card of board.cards) {
     const status = board.statuses.find(s => s.id === card.statusId);
     const group = board.groups.find(g => g.id === card.groupId);
+    const subGroup = board.subGroups.find(sg => sg.id === card.subGroupId);
+    const checkDone = card.checklist.filter(i => i.done).length;
+    const checkTotal = card.checklist.length;
+    const customValues = board.fields.map(f => card.customFields[f.id] || '');
     rows.push([
       status?.name || '',
       group?.name || '',
+      subGroup?.name || '',
       card.title,
       card.description,
       card.label,
       card.priority,
       card.dueDate,
+      checkTotal > 0 ? `${checkDone}/${checkTotal}` : '',
       String(card.comments.length),
+      ...customValues,
     ]);
   }
   const csv = rows.map(row =>
@@ -36,29 +45,9 @@ export function exportCSV(board: KanbanBoard) {
 }
 
 export function exportMarkdown(board: KanbanBoard) {
-  const lines: string[] = [];
-  lines.push(`# ${board.meta.title || 'Kanban Board'}`);
-  if (board.meta.description) {
-    lines.push('', board.meta.description);
-  }
-  lines.push('');
-  for (const status of board.statuses) {
-    const statusCards = board.cards.filter(c => c.statusId === status.id);
-    lines.push(`## ${status.name} (${statusCards.length} cards)`);
-    lines.push('');
-    for (const card of statusCards) {
-      lines.push(`- **${card.title}**`);
-      if (card.description) lines.push(`  ${card.description}`);
-      if (card.label) lines.push(`  Label: ${card.label}`);
-      if (card.dueDate) lines.push(`  Due: ${card.dueDate}`);
-      if (card.comments.length > 0) {
-        lines.push(`  Comments: ${card.comments.length}`);
-      }
-    }
-    lines.push('');
-  }
+  const md = boardToMarkdown(board);
   const title = board.meta.title || 'kanban-board';
-  downloadFile(lines.join('\n'), `${title.replace(/\s+/g, '-').toLowerCase()}.md`, 'text/markdown');
+  downloadFile(md, `${title.replace(/\s+/g, '-').toLowerCase()}.md`, 'text/markdown');
 }
 
 export function exportJSON(board: KanbanBoard) {

@@ -78,6 +78,7 @@ export const ListView = memo(function ListView({ board, onCardClick, onAddCard, 
                                 <ListCard key={card.id} card={card} index={index} onClick={onCardClick} />
                               ))}
                               {provided.placeholder}
+                              <ListAddCard groupId={gDef.id} onAddCard={onAddCard} />
                             </div>
                           )}
                         </Droppable>
@@ -102,6 +103,7 @@ export const ListView = memo(function ListView({ board, onCardClick, onAddCard, 
                                 <ListCard key={card.id} card={card} index={index} onClick={onCardClick} />
                               ))}
                               {provided.placeholder}
+                              <ListAddCard groupId={gDef.id} onAddCard={onAddCard} />
                             </div>
                           )}
                         </Droppable>

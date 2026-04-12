@@ -11,7 +11,7 @@ interface Props {
   onMoveCard: (cardId: string, toColumnId: string) => void;
 }
 
-type SortKey = 'title' | 'group' | 'subGroup' | 'priority' | 'dueDate' | 'label' | 'tasks' | 'comments';
+type SortKey = 'title' | 'status' | 'group' | 'subGroup' | 'priority' | 'dueDate' | 'label' | 'tasks' | 'comments';
 type SortDir = 'asc' | 'desc';
 
 interface Row {
@@ -27,8 +27,9 @@ function getColumns(board: KanbanBoard): { key: SortKey; label: string; editable
   const fl = (id: string) => getFieldLabel(id, board.meta);
   return [
     { key: 'title', label: fl('title'), editable: true },
-    { key: 'group', label: fl('status'), editable: true },
-    { key: 'subGroup', label: fl('group'), editable: true },
+    { key: 'status', label: fl('status'), editable: true },
+    { key: 'group', label: fl('group'), editable: true },
+    { key: 'subGroup', label: fl('subGroup'), editable: true },
     { key: 'priority', label: fl('priority'), editable: true },
     { key: 'dueDate', label: fl('dueDate'), editable: true },
     { key: 'label', label: fl('label'), editable: true },
@@ -41,7 +42,8 @@ function compareRows(a: Row, b: Row, sortKey: SortKey, sortDir: SortDir): number
   let cmp = 0;
   switch (sortKey) {
     case 'title': cmp = a.card.title.localeCompare(b.card.title); break;
-    case 'group': cmp = (a.status?.name || '').localeCompare(b.status?.name || ''); break;
+    case 'status': cmp = (a.status?.name || '').localeCompare(b.status?.name || ''); break;
+    case 'group': cmp = (a.group?.name || '').localeCompare(b.group?.name || ''); break;
     case 'subGroup': cmp = (a.subGroup?.name || '').localeCompare(b.subGroup?.name || ''); break;
     case 'priority': cmp = PRIORITY_ORDER[a.card.priority] - PRIORITY_ORDER[b.card.priority]; break;
     case 'dueDate': cmp = (a.card.dueDate || '').localeCompare(b.card.dueDate || ''); break;
@@ -102,7 +104,7 @@ function SelectCell({ value, options, onSave }: {
   );
 }
 
-export const TableView = memo(function TableView({ board, onCardClick, onUpdateCard, onMoveCard }: Props) {
+export const TableView = memo(function TableView({ board, onCardClick, onUpdateCard }: Props) {
   const [sortKey, setSortKey] = useState<SortKey>('title');
   const [sortDir, setSortDir] = useState<SortDir>('asc');
   const [editingCell, setEditingCell] = useState<{ cardId: string; column: SortKey } | null>(null);
@@ -137,25 +139,19 @@ export const TableView = memo(function TableView({ board, onCardClick, onUpdateC
     const row = rows.find(r => r.card.id === cardId);
     if (!row) return;
 
-    if (column === 'group') {
-      // Change card's status
-      if (value !== row.card.statusId) {
-        onUpdateCard({ ...row.card, statusId: value });
-      }
-      return;
-    }
-
     const updated = { ...row.card };
     switch (column) {
       case 'title': updated.title = value || 'Untitled'; break;
-      case 'subGroup': updated.groupId = value; break;
+      case 'status': updated.statusId = value; break;
+      case 'group': updated.groupId = value; break;
+      case 'subGroup': updated.subGroupId = value; break;
       case 'priority': updated.priority = value as Priority; break;
       case 'dueDate': updated.dueDate = value; break;
       case 'label': updated.label = value; break;
       default: return;
     }
     onUpdateCard(updated);
-  }, [rows, onUpdateCard, onMoveCard]);
+  }, [rows, onUpdateCard]);
 
   const isEditing = (cardId: string, col: SortKey) =>
     editingCell?.cardId === cardId && editingCell?.column === col;
@@ -173,6 +169,11 @@ export const TableView = memo(function TableView({ board, onCardClick, onUpdateC
   const groupOptions = [
     { value: '', label: 'None' },
     ...board.groups.map(g => ({ value: g.id, label: g.name })),
+  ];
+
+  const subGroupOptions = [
+    { value: '', label: 'None' },
+    ...board.subGroups.map(sg => ({ value: sg.id, label: sg.name })),
   ];
 
   // Grouping logic
@@ -267,7 +268,7 @@ export const TableView = memo(function TableView({ board, onCardClick, onUpdateC
   };
 
   const renderRow = (row: Row) => {
-    const { card, status, group } = row;
+    const { card, status, group, subGroup } = row;
     const dateInfo = formatDueDate(card.dueDate);
     const totalTasks = card.checklist.length;
     const doneTasks = card.checklist.filter(i => i.done).length;
@@ -279,11 +280,14 @@ export const TableView = memo(function TableView({ board, onCardClick, onUpdateC
           onDoubleClick={() => { if (clickTimer.current) { clearTimeout(clickTimer.current); clickTimer.current = null; } startEdit(card.id, 'title'); }}>
           {isEditing(card.id, 'title') ? <EditCell value={card.title} onSave={v => saveCell(card.id, 'title', v)} /> : card.title || 'Untitled'}
         </td>
+        <td onDoubleClick={() => startEdit(card.id, 'status')}>
+          {isEditing(card.id, 'status') ? <SelectCell value={card.statusId} options={statusOptions} onSave={v => saveCell(card.id, 'status', v)} /> : <span className="table-cell-muted">{status?.name || '-'}</span>}
+        </td>
         <td onDoubleClick={() => startEdit(card.id, 'group')}>
-          {isEditing(card.id, 'group') ? <SelectCell value={card.statusId} options={statusOptions} onSave={v => saveCell(card.id, 'group', v)} /> : <span className="table-cell-muted">{status?.name || '-'}</span>}
+          {isEditing(card.id, 'group') ? <SelectCell value={card.groupId} options={groupOptions} onSave={v => saveCell(card.id, 'group', v)} /> : <span className="table-cell-muted">{group?.name || '-'}</span>}
         </td>
         <td onDoubleClick={() => startEdit(card.id, 'subGroup')}>
-          {isEditing(card.id, 'subGroup') ? <SelectCell value={card.groupId} options={groupOptions} onSave={v => saveCell(card.id, 'subGroup', v)} /> : <span className="table-cell-muted">{group?.name || '-'}</span>}
+          {isEditing(card.id, 'subGroup') ? <SelectCell value={card.subGroupId} options={subGroupOptions} onSave={v => saveCell(card.id, 'subGroup', v)} /> : <span className="table-cell-muted">{subGroup?.name || '-'}</span>}
         </td>
         <td onDoubleClick={() => startEdit(card.id, 'priority')}>
           {isEditing(card.id, 'priority') ? <SelectCell value={card.priority} options={priorityOptions} onSave={v => saveCell(card.id, 'priority', v)} /> : card.priority ? <span className={`card-priority priority-${card.priority}`}>{card.priority}</span> : <span className="table-cell-muted">-</span>}
