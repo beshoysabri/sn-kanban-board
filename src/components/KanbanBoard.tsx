@@ -1,15 +1,14 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-pangea/dnd';
-import { v4 as uuid } from 'uuid';
-import { KanbanGroupComponent } from './KanbanGroup';
+import { KanbanColumnComponent } from './KanbanColumn';
 import { CardModal } from './CardModal';
 import { BoardHeader } from './BoardHeader';
 import { BoardSidebar } from './BoardSidebar';
 import { ListView } from './ListView';
 import { AnalyticsView } from './AnalyticsView';
 import { ShortcutsHelp } from './shared/ShortcutsHelp';
-import { createNewCard, createNewGroup, createDefaultBoard } from '../lib/markdown';
-import type { KanbanBoard as BoardType, KanbanCard, KanbanGroup, BoardMeta, SubGroup } from '../types/kanban';
+import { createNewCard, createNewStatus, createDefaultBoard } from '../lib/markdown';
+import type { KanbanBoard as BoardType, KanbanCard, BoardMeta } from '../types/kanban';
 
 interface Props {
   board: BoardType;
@@ -18,11 +17,12 @@ interface Props {
 
 export function KanbanBoard({ board, onChange }: Props) {
   const [editingCard, setEditingCard] = useState<KanbanCard | null>(null);
-  const [addingGroup, setAddingGroup] = useState(false);
-  const [newGroupTitle, setNewGroupTitle] = useState('');
+  const [addingColumn, setAddingColumn] = useState(false);
+  const [newColumnTitle, setNewColumnTitle] = useState('');
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
+  const [selectedStatusId, setSelectedStatusId] = useState<string | null>(null);
   const [showShortcuts, setShowShortcuts] = useState(false);
+  const [showSchemaEditor, setShowSchemaEditor] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const boardRef = useRef(board);
@@ -33,17 +33,23 @@ export function KanbanBoard({ board, onChange }: Props) {
     setTimeout(() => setToast(null), 2000);
   }, []);
 
-  // Lazy-load TableView
-  const [TableView, setTableView] = useState<React.ComponentType<{
-    board: BoardType; onCardClick: (card: KanbanCard) => void;
-    onUpdateCard: (card: KanbanCard) => void; onMoveCard: (cardId: string, toGroupId: string) => void;
-  }> | null>(null);
+  // Lazy-load TableView and SchemaEditor
+  const [TableView, setTableView] = useState<React.ComponentType<any> | null>(null);
+  const [SchemaEditor, setSchemaEditor] = useState<React.ComponentType<any> | null>(null);
+
   useEffect(() => {
     if (board.meta.viewMode === 'table' && !TableView) {
       import('./TableView').then(mod => setTableView(() => mod.TableView));
     }
   }, [board.meta.viewMode, TableView]);
 
+  useEffect(() => {
+    if (showSchemaEditor && !SchemaEditor) {
+      import('./SchemaEditor').then(mod => setSchemaEditor(() => mod.SchemaEditor));
+    }
+  }, [showSchemaEditor, SchemaEditor]);
+
+  // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const tag = (e.target as HTMLElement).tagName;
@@ -53,33 +59,37 @@ export function KanbanBoard({ board, onChange }: Props) {
         case '?': e.preventDefault(); setShowShortcuts(v => !v); break;
         case 'n': case 'N':
           if (!e.ctrlKey && !e.metaKey) { e.preventDefault(); handleQuickAddCard(); } break;
-        case 'l': case 'L':
-          if (!e.ctrlKey && !e.metaKey) { e.preventDefault(); handleQuickAddGroup(); } break;
         case 'v': case 'V':
           if (!e.ctrlKey && !e.metaKey) {
             e.preventDefault();
-            const cur = boardRef.current;
             const views: BoardType['meta']['viewMode'][] = ['list', 'board', 'table', 'analytics'];
-            const idx = views.indexOf(cur.meta.viewMode);
-            const next = views[(idx + 1) % views.length];
-            onChange({ ...cur, meta: { ...cur.meta, viewMode: next } });
+            const idx = views.indexOf(boardRef.current.meta.viewMode);
+            handleUpdateMeta({ viewMode: views[(idx + 1) % views.length] });
           } break;
         case 'Escape': if (showShortcuts) setShowShortcuts(false); break;
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [onChange, showShortcuts]);
+  }, [showShortcuts]);
 
-  const updateBoard = useCallback(
-    (updater: (groups: KanbanGroup[]) => KanbanGroup[]) => {
-      const cur = boardRef.current;
-      const newGroups = updater(cur.groups.map((g) => ({ ...g, cards: [...g.cards] })));
-      onChange({ ...cur, groups: newGroups });
-    },
-    [onChange]
-  );
+  // --- Helpers ---
+  const getColumns = useCallback(() => {
+    const groupBy = board.meta.boardGroupBy || 'status';
+    if (groupBy === 'group') return board.groups.map(g => ({ id: g.id, name: g.name, color: g.color, wipLimit: 0 }));
+    return board.statuses.map(s => ({ id: s.id, name: s.name, color: s.color, wipLimit: s.wipLimit }));
+  }, [board]);
 
+  const getColumnField = useCallback((): 'statusId' | 'groupId' => {
+    return (board.meta.boardGroupBy === 'group') ? 'groupId' : 'statusId';
+  }, [board.meta.boardGroupBy]);
+
+  const getCardsForColumn = useCallback((columnId: string) => {
+    const field = getColumnField();
+    return board.cards.filter(c => c[field] === columnId);
+  }, [board.cards, getColumnField]);
+
+  // --- Card Mutations ---
   const handleUpdateMeta = useCallback(
     (partial: Partial<BoardMeta>) => {
       const cur = boardRef.current;
@@ -93,177 +103,187 @@ export function KanbanBoard({ board, onChange }: Props) {
       const { source, destination, type } = result;
       if (!destination) return;
       if (source.droppableId === destination.droppableId && source.index === destination.index) return;
+
+      const cur = boardRef.current;
+
       if (type === 'LANE') {
-        updateBoard((groups) => {
-          const [moved] = groups.splice(source.index, 1);
-          groups.splice(destination.index, 0, moved);
-          return groups;
-        });
+        // Reorder columns (statuses or groups)
+        const groupBy = cur.meta.boardGroupBy || 'status';
+        if (groupBy === 'group') {
+          const arr = [...cur.groups];
+          const [moved] = arr.splice(source.index, 1);
+          arr.splice(destination.index, 0, moved);
+          onChange({ ...cur, groups: arr });
+        } else {
+          const arr = [...cur.statuses];
+          const [moved] = arr.splice(source.index, 1);
+          arr.splice(destination.index, 0, moved);
+          onChange({ ...cur, statuses: arr });
+        }
         return;
       }
-      updateBoard((groups) => {
-        const srcGroup = groups.find((g) => g.id === source.droppableId);
-        const destGroup = groups.find((g) => g.id === destination.droppableId);
-        if (!srcGroup || !destGroup) return groups;
-        const [movedCard] = srcGroup.cards.splice(source.index, 1);
-        destGroup.cards.splice(destination.index, 0, movedCard);
-        return groups;
-      });
-      showToast('Card moved');
+
+      // Card drag
+      const field = getColumnField();
+      const cards = [...cur.cards];
+
+      // Find the card in the source column's ordered cards
+      const srcCards = cards.filter(c => c[field] === source.droppableId);
+      const card = srcCards[source.index];
+      if (!card) return;
+
+      // Remove from current position
+      const cardIdx = cards.findIndex(c => c.id === card.id);
+      cards.splice(cardIdx, 1);
+
+      // Update column assignment if cross-column
+      const updatedCard = { ...card };
+      if (source.droppableId !== destination.droppableId) {
+        updatedCard[field] = destination.droppableId;
+      }
+
+      // Find insertion position in flat array
+      const destCards = cards.filter(c => c[field] === destination.droppableId);
+      if (destination.index >= destCards.length) {
+        // Append after last card in destination column
+        const lastDestCard = destCards[destCards.length - 1];
+        const insertAfter = lastDestCard ? cards.indexOf(lastDestCard) + 1 : cards.length;
+        cards.splice(insertAfter, 0, updatedCard);
+      } else {
+        const targetCard = destCards[destination.index];
+        const insertAt = cards.indexOf(targetCard);
+        cards.splice(insertAt, 0, updatedCard);
+      }
+
+      onChange({ ...cur, cards });
+      if (source.droppableId !== destination.droppableId) showToast('Card moved');
     },
-    [updateBoard, showToast]
+    [onChange, showToast, getColumnField]
   );
 
   const handleAddCard = useCallback(
-    (groupId: string, title: string) => {
+    (columnId: string, title: string) => {
+      const cur = boardRef.current;
       const card = createNewCard(title);
-      updateBoard((groups) => {
-        const group = groups.find((g) => g.id === groupId);
-        if (group) group.cards.push(card);
-        return groups;
-      });
+      const field = getColumnField();
+      card[field] = columnId;
+      // If column is status and there's a first status, set it
+      if (field === 'statusId') card.statusId = columnId;
+      else if (field === 'groupId') card.groupId = columnId;
+      onChange({ ...cur, cards: [...cur.cards, card] });
       showToast('Card created');
     },
-    [updateBoard, showToast]
+    [onChange, showToast, getColumnField]
   );
 
   const handleQuickAddCard = useCallback(() => {
     const cur = boardRef.current;
-    if (cur.groups.length === 0) return;
-    const target = selectedGroupId
-      ? cur.groups.find(g => g.id === selectedGroupId) || cur.groups[0]
-      : cur.groups[0];
+    const columns = getColumns();
+    if (columns.length === 0) return;
+    const target = selectedStatusId
+      ? columns.find(c => c.id === selectedStatusId) || columns[0]
+      : columns[0];
     const card = createNewCard('New Card');
-    updateBoard((groups) => {
-      const group = groups.find((g) => g.id === target.id);
-      if (group) group.cards.push(card);
-      return groups;
-    });
+    const field = getColumnField();
+    card[field] = target.id;
+    onChange({ ...cur, cards: [...cur.cards, card] });
     showToast('Card created');
-  }, [updateBoard, showToast, selectedGroupId]);
-
-  const handleQuickAddGroup = useCallback(() => {
-    const group = createNewGroup('New Group');
-    const cur = boardRef.current;
-    onChange({ ...cur, groups: [...cur.groups, group] });
-    showToast('Group created');
-  }, [onChange, showToast]);
-
-  const handleDeleteGroup = useCallback(
-    (groupId: string) => { updateBoard((groups) => groups.filter((g) => g.id !== groupId)); showToast('Group deleted'); },
-    [updateBoard, showToast]
-  );
-
-  const handleDuplicateGroup = useCallback(
-    (groupId: string) => {
-      updateBoard((groups) => {
-        const idx = groups.findIndex((g) => g.id === groupId);
-        if (idx === -1) return groups;
-        const original = groups[idx];
-        const dup: KanbanGroup = {
-          id: uuid(), title: `${original.title} (copy)`, color: original.color,
-          cards: original.cards.map((c) => ({ ...c, id: uuid() })), wipLimit: original.wipLimit,
-        };
-        groups.splice(idx + 1, 0, dup);
-        return groups;
-      });
-      showToast('Group duplicated');
-    },
-    [updateBoard, showToast]
-  );
-
-  const handleRenameGroup = useCallback(
-    (groupId: string, title: string) => {
-      updateBoard((groups) => { const g = groups.find((g) => g.id === groupId); if (g) g.title = title; return groups; });
-    },
-    [updateBoard]
-  );
-
-  const handleSetGroupColor = useCallback(
-    (groupId: string, color: string) => {
-      updateBoard((groups) => { const g = groups.find((g) => g.id === groupId); if (g) g.color = color; return groups; });
-    },
-    [updateBoard]
-  );
-
-  const handleSetWipLimit = useCallback(
-    (groupId: string, limit: number) => {
-      updateBoard((groups) => { const g = groups.find((g) => g.id === groupId); if (g) g.wipLimit = limit; return groups; });
-    },
-    [updateBoard]
-  );
-
-  const handleReorderGroups = useCallback(
-    (newGroups: KanbanGroup[]) => { const cur = boardRef.current; onChange({ ...cur, groups: newGroups }); },
-    [onChange]
-  );
+  }, [onChange, showToast, getColumns, selectedStatusId, getColumnField]);
 
   const handleSaveCard = useCallback(
     (updatedCard: KanbanCard) => {
-      updateBoard((groups) => {
-        for (const group of groups) {
-          const idx = group.cards.findIndex((c) => c.id === updatedCard.id);
-          if (idx !== -1) { group.cards[idx] = updatedCard; break; }
-        }
-        return groups;
-      });
+      const cur = boardRef.current;
+      onChange({ ...cur, cards: cur.cards.map(c => c.id === updatedCard.id ? updatedCard : c) });
     },
-    [updateBoard]
+    [onChange]
   );
 
   const handleDeleteCard = useCallback(
     (cardId: string) => {
-      updateBoard((groups) => {
-        for (const group of groups) {
-          const idx = group.cards.findIndex((c) => c.id === cardId);
-          if (idx !== -1) { group.cards.splice(idx, 1); break; }
-        }
-        return groups;
-      });
+      const cur = boardRef.current;
+      onChange({ ...cur, cards: cur.cards.filter(c => c.id !== cardId) });
       showToast('Card deleted');
     },
-    [updateBoard, showToast]
+    [onChange, showToast]
   );
 
   const handleMoveCard = useCallback(
-    (cardId: string, toGroupId: string) => {
-      updateBoard((groups) => {
-        let movedCard: KanbanCard | null = null;
-        for (const group of groups) {
-          const idx = group.cards.findIndex(c => c.id === cardId);
-          if (idx !== -1) { [movedCard] = group.cards.splice(idx, 1); break; }
-        }
-        if (movedCard) {
-          const target = groups.find(g => g.id === toGroupId);
-          if (target) target.cards.push(movedCard);
-        }
-        return groups;
-      });
+    (cardId: string, toColumnId: string) => {
+      const cur = boardRef.current;
+      const field = getColumnField();
+      onChange({ ...cur, cards: cur.cards.map(c => c.id === cardId ? { ...c, [field]: toColumnId } : c) });
     },
-    [updateBoard]
+    [onChange, getColumnField]
   );
 
-  const handleAddSubGroup = useCallback(() => {
-    const name = prompt('Sub-group name:');
-    if (!name?.trim()) return;
-    const cur = boardRef.current;
-    const sg: SubGroup = { id: uuid(), name: name.trim(), color: '' };
-    onChange({ ...cur, subGroups: [...cur.subGroups, sg] });
-    showToast('Sub-group created');
-  }, [onChange, showToast]);
+  // --- Column Mutations ---
+  const handleDeleteColumn = useCallback(
+    (columnId: string) => {
+      const cur = boardRef.current;
+      const groupBy = cur.meta.boardGroupBy || 'status';
+      if (groupBy === 'group') {
+        const remaining = cur.groups.filter(g => g.id !== columnId);
+        const fallbackId = remaining[0]?.id || '';
+        const cards = cur.cards.map(c => c.groupId === columnId ? { ...c, groupId: fallbackId } : c);
+        onChange({ ...cur, groups: remaining, cards });
+      } else {
+        const remaining = cur.statuses.filter(s => s.id !== columnId);
+        const fallbackId = remaining[0]?.id || '';
+        const cards = cur.cards.map(c => c.statusId === columnId ? { ...c, statusId: fallbackId } : c);
+        onChange({ ...cur, statuses: remaining, cards });
+      }
+      showToast('Column deleted');
+    },
+    [onChange, showToast]
+  );
 
-  const handleAddGroupFromForm = () => {
-    const trimmed = newGroupTitle.trim();
+  const handleRenameColumn = useCallback(
+    (columnId: string, name: string) => {
+      const cur = boardRef.current;
+      const groupBy = cur.meta.boardGroupBy || 'status';
+      if (groupBy === 'group') {
+        onChange({ ...cur, groups: cur.groups.map(g => g.id === columnId ? { ...g, name } : g) });
+      } else {
+        onChange({ ...cur, statuses: cur.statuses.map(s => s.id === columnId ? { ...s, name } : s) });
+      }
+    },
+    [onChange]
+  );
+
+  const handleSetColumnColor = useCallback(
+    (columnId: string, color: string) => {
+      const cur = boardRef.current;
+      const groupBy = cur.meta.boardGroupBy || 'status';
+      if (groupBy === 'group') {
+        onChange({ ...cur, groups: cur.groups.map(g => g.id === columnId ? { ...g, color } : g) });
+      } else {
+        onChange({ ...cur, statuses: cur.statuses.map(s => s.id === columnId ? { ...s, color } : s) });
+      }
+    },
+    [onChange]
+  );
+
+  const handleSetWipLimit = useCallback(
+    (columnId: string, limit: number) => {
+      const cur = boardRef.current;
+      onChange({ ...cur, statuses: cur.statuses.map(s => s.id === columnId ? { ...s, wipLimit: limit } : s) });
+    },
+    [onChange]
+  );
+
+  const handleAddColumnFromForm = () => {
+    const trimmed = newColumnTitle.trim();
     if (!trimmed) return;
-    const group = createNewGroup(trimmed);
     const cur = boardRef.current;
-    onChange({ ...cur, groups: [...cur.groups, group] });
-    setNewGroupTitle('');
-    setAddingGroup(false);
-    showToast('Group created');
+    const status = createNewStatus(trimmed);
+    onChange({ ...cur, statuses: [...cur.statuses, status] });
+    setNewColumnTitle('');
+    setAddingColumn(false);
+    showToast('Status created');
   };
 
-  if (board.groups.length === 0) {
+  // --- Empty state ---
+  if (board.statuses.length === 0 && board.groups.length === 0) {
     return (
       <div className="empty-state">
         <div className="empty-state-icon">
@@ -273,17 +293,20 @@ export function KanbanBoard({ board, onChange }: Props) {
           </svg>
         </div>
         <h2 className="empty-state-title">No board yet</h2>
-        <p className="empty-state-text">Get started with a default Kanban board or add your own groups.</p>
+        <p className="empty-state-text">Get started with a default Kanban board or add your own.</p>
         <div className="empty-state-actions">
           <button className="empty-state-primary" onClick={() => onChange(createDefaultBoard())}>Create Default Board</button>
           <button className="empty-state-secondary" onClick={() => {
-            const group = createNewGroup('My Group');
-            onChange({ ...boardRef.current, groups: [group] });
+            const status = createNewStatus('To Do');
+            onChange({ ...boardRef.current, statuses: [status] });
           }}>Start Empty</button>
         </div>
       </div>
     );
   }
+
+  // --- Render Views ---
+  const columns = getColumns();
 
   const renderView = () => {
     if (board.meta.viewMode === 'analytics') return <AnalyticsView board={board} />;
@@ -294,15 +317,10 @@ export function KanbanBoard({ board, onChange }: Props) {
     if (board.meta.viewMode === 'list') {
       return (
         <ListView
-          groups={board.groups}
+          board={board}
           onCardClick={setEditingCard}
           onAddCard={handleAddCard}
           onDragEnd={handleDragEnd}
-          onAddGroup={(title: string) => {
-            const group = createNewGroup(title);
-            onChange({ ...boardRef.current, groups: [...boardRef.current.groups, group] });
-            showToast('Group created');
-          }}
         />
       );
     }
@@ -311,20 +329,21 @@ export function KanbanBoard({ board, onChange }: Props) {
         <Droppable droppableId="board" type="LANE" direction="horizontal">
           {(provided) => (
             <div className="kanban-board" ref={provided.innerRef} {...provided.droppableProps}>
-              {board.groups.map((group, index) => (
-                <Draggable key={group.id} draggableId={group.id} index={index}>
+              {columns.map((col, index) => (
+                <Draggable key={col.id} draggableId={col.id} index={index}>
                   {(provided, snapshot) => (
                     <div ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps}
                       className={`lane-wrapper ${snapshot.isDragging ? 'lane-dragging' : ''}`}>
-                      <KanbanGroupComponent
-                        group={group}
-                        subGroups={board.subGroups}
+                      <KanbanColumnComponent
+                        column={col}
+                        cards={getCardsForColumn(col.id)}
+                        board={board}
+                        subGroupBy={board.meta.boardSubGroupBy}
                         onCardClick={setEditingCard}
                         onAddCard={handleAddCard}
-                        onDeleteGroup={handleDeleteGroup}
-                        onDuplicateGroup={handleDuplicateGroup}
-                        onRenameGroup={handleRenameGroup}
-                        onSetGroupColor={handleSetGroupColor}
+                        onDeleteColumn={handleDeleteColumn}
+                        onRenameColumn={handleRenameColumn}
+                        onSetColumnColor={handleSetColumnColor}
                         onSetWipLimit={handleSetWipLimit}
                       />
                     </div>
@@ -333,23 +352,23 @@ export function KanbanBoard({ board, onChange }: Props) {
               ))}
               {provided.placeholder}
               <div className="add-lane-container">
-                {addingGroup ? (
+                {addingColumn ? (
                   <div className="add-lane-form">
-                    <input className="add-lane-input" value={newGroupTitle}
-                      onChange={(e) => setNewGroupTitle(e.target.value)} placeholder="Group title..." autoFocus
-                      onKeyDown={(e) => { if (e.key === 'Enter') handleAddGroupFromForm(); if (e.key === 'Escape') { setAddingGroup(false); setNewGroupTitle(''); } }}
-                      onBlur={() => { if (!newGroupTitle.trim()) setAddingGroup(false); }} />
+                    <input className="add-lane-input" value={newColumnTitle}
+                      onChange={e => setNewColumnTitle(e.target.value)} placeholder="Status name..." autoFocus
+                      onKeyDown={e => { if (e.key === 'Enter') handleAddColumnFromForm(); if (e.key === 'Escape') { setAddingColumn(false); setNewColumnTitle(''); } }}
+                      onBlur={() => { if (!newColumnTitle.trim()) setAddingColumn(false); }} />
                     <div className="add-lane-buttons">
-                      <button className="confirm-add-lane" onClick={handleAddGroupFromForm}>Add</button>
-                      <button className="cancel-add-lane" onClick={() => { setAddingGroup(false); setNewGroupTitle(''); }}>Cancel</button>
+                      <button className="confirm-add-lane" onClick={handleAddColumnFromForm}>Add</button>
+                      <button className="cancel-add-lane" onClick={() => { setAddingColumn(false); setNewColumnTitle(''); }}>Cancel</button>
                     </div>
                   </div>
                 ) : (
-                  <button className="add-lane-btn" onClick={() => setAddingGroup(true)}>
+                  <button className="add-lane-btn" onClick={() => setAddingColumn(true)}>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                       <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
                     </svg>
-                    Add Group
+                    Add Status
                   </button>
                 )}
               </div>
@@ -367,6 +386,7 @@ export function KanbanBoard({ board, onChange }: Props) {
         onUpdateMeta={handleUpdateMeta}
         onToggleSidebar={() => setSidebarOpen(v => !v)}
         onShowShortcuts={() => setShowShortcuts(true)}
+        onOpenSchemaEditor={() => setShowSchemaEditor(true)}
         onAddCard={handleQuickAddCard}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
@@ -375,12 +395,10 @@ export function KanbanBoard({ board, onChange }: Props) {
       <div className="kb-body">
         <BoardSidebar
           board={board}
-          selectedGroupId={selectedGroupId}
-          onSelectGroup={setSelectedGroupId}
+          selectedStatusId={selectedStatusId}
+          onSelectStatus={setSelectedStatusId}
           onAddCard={handleQuickAddCard}
-          onAddGroup={handleQuickAddGroup}
-          onAddSubGroup={handleAddSubGroup}
-          onReorderGroups={handleReorderGroups}
+          onOpenSchemaEditor={() => setShowSchemaEditor(true)}
           sidebarOpen={sidebarOpen}
           onCloseSidebar={() => setSidebarOpen(false)}
         />
@@ -393,11 +411,15 @@ export function KanbanBoard({ board, onChange }: Props) {
       {editingCard && (
         <CardModal
           card={editingCard}
-          subGroups={board.subGroups}
+          board={board}
           onSave={handleSaveCard}
           onDelete={handleDeleteCard}
           onClose={() => setEditingCard(null)}
         />
+      )}
+
+      {showSchemaEditor && SchemaEditor && (
+        <SchemaEditor board={board} onUpdateBoard={onChange} onClose={() => setShowSchemaEditor(false)} />
       )}
 
       {showShortcuts && <ShortcutsHelp onClose={() => setShowShortcuts(false)} />}

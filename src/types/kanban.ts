@@ -2,12 +2,28 @@ export type ViewMode = 'list' | 'board' | 'table' | 'analytics';
 
 export type Priority = 'low' | 'medium' | 'high' | 'critical' | '';
 
+export type FieldType = 'text' | 'select' | 'date' | 'number';
+
 export interface ChecklistItem {
   text: string;
   done: boolean;
 }
 
-export interface SubGroup {
+export interface FieldDef {
+  id: string;
+  name: string;
+  type: FieldType;
+  options?: string[];
+}
+
+export interface StatusDef {
+  id: string;
+  name: string;
+  color: string;
+  wipLimit: number;
+}
+
+export interface GroupDef {
   id: string;
   name: string;
   color: string;
@@ -17,33 +33,33 @@ export interface BoardMeta {
   title: string;
   description: string;
   viewMode: ViewMode;
+  boardGroupBy: string;
+  boardSubGroupBy: string;
 }
 
 export interface KanbanCard {
   id: string;
   title: string;
   description: string;
+  statusId: string;
+  groupId: string;
+  subGroupId: string;
+  priority: Priority;
+  dueDate: string;
   label: string;
   labelColor: string;
-  dueDate: string;
-  comments: string[];
-  priority: Priority;
   checklist: ChecklistItem[];
-  subGroupId: string;
-}
-
-export interface KanbanGroup {
-  id: string;
-  title: string;
-  color: string;
-  cards: KanbanCard[];
-  wipLimit: number;
+  comments: string[];
+  customFields: Record<string, string>;
 }
 
 export interface KanbanBoard {
   meta: BoardMeta;
-  groups: KanbanGroup[];
-  subGroups: SubGroup[];
+  statuses: StatusDef[];
+  groups: GroupDef[];
+  subGroups: GroupDef[];
+  cards: KanbanCard[];
+  fields: FieldDef[];
 }
 
 export interface EditorState {

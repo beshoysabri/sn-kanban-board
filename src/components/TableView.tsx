@@ -1,13 +1,13 @@
 import { memo, useState, useRef, useEffect, useCallback } from 'react';
 // colors not needed for table view
 import { formatDueDate } from '../lib/dates';
-import type { KanbanBoard, KanbanCard, KanbanGroup, SubGroup, Priority } from '../types/kanban';
+import type { KanbanBoard, KanbanCard, StatusDef, GroupDef, Priority } from '../types/kanban';
 
 interface Props {
   board: KanbanBoard;
   onCardClick: (card: KanbanCard) => void;
   onUpdateCard: (card: KanbanCard) => void;
-  onMoveCard: (cardId: string, toGroupId: string) => void;
+  onMoveCard: (cardId: string, toColumnId: string) => void;
 }
 
 type SortKey = 'title' | 'group' | 'subGroup' | 'priority' | 'dueDate' | 'label' | 'tasks' | 'comments';
@@ -15,16 +15,17 @@ type SortDir = 'asc' | 'desc';
 
 interface Row {
   card: KanbanCard;
-  group: KanbanGroup;
-  subGroup: SubGroup | undefined;
+  status: StatusDef | undefined;
+  group: GroupDef | undefined;
+  subGroup: GroupDef | undefined;
 }
 
 const PRIORITY_ORDER: Record<Priority, number> = { critical: 4, high: 3, medium: 2, low: 1, '': 0 };
 
 const COLUMNS: { key: SortKey; label: string; editable: boolean }[] = [
   { key: 'title', label: 'Title', editable: true },
-  { key: 'group', label: 'Group', editable: true },
-  { key: 'subGroup', label: 'Sub-group', editable: true },
+  { key: 'group', label: 'Status', editable: true },
+  { key: 'subGroup', label: 'Group', editable: true },
   { key: 'priority', label: 'Priority', editable: true },
   { key: 'dueDate', label: 'Due Date', editable: true },
   { key: 'label', label: 'Label', editable: true },
@@ -36,7 +37,7 @@ function compareRows(a: Row, b: Row, sortKey: SortKey, sortDir: SortDir): number
   let cmp = 0;
   switch (sortKey) {
     case 'title': cmp = a.card.title.localeCompare(b.card.title); break;
-    case 'group': cmp = a.group.title.localeCompare(b.group.title); break;
+    case 'group': cmp = (a.status?.name || '').localeCompare(b.status?.name || ''); break;
     case 'subGroup': cmp = (a.subGroup?.name || '').localeCompare(b.subGroup?.name || ''); break;
     case 'priority': cmp = PRIORITY_ORDER[a.card.priority] - PRIORITY_ORDER[b.card.priority]; break;
     case 'dueDate': cmp = (a.card.dueDate || '').localeCompare(b.card.dueDate || ''); break;
@@ -103,14 +104,16 @@ export const TableView = memo(function TableView({ board, onCardClick, onUpdateC
   const [editingCell, setEditingCell] = useState<{ cardId: string; column: SortKey } | null>(null);
   const clickTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const statusMap = new Map(board.statuses.map(s => [s.id, s]));
+  const groupMap = new Map(board.groups.map(g => [g.id, g]));
   const subGroupMap = new Map(board.subGroups.map(sg => [sg.id, sg]));
 
-  const rows: Row[] = board.groups.flatMap(group =>
-    group.cards.map(card => ({
-      card, group,
-      subGroup: card.subGroupId ? subGroupMap.get(card.subGroupId) : undefined,
-    })),
-  );
+  const rows: Row[] = board.cards.map(card => ({
+    card,
+    status: card.statusId ? statusMap.get(card.statusId) : undefined,
+    group: card.groupId ? groupMap.get(card.groupId) : undefined,
+    subGroup: card.subGroupId ? subGroupMap.get(card.subGroupId) : undefined,
+  }));
 
   const sorted = [...rows].sort((a, b) => compareRows(a, b, sortKey, sortDir));
 
@@ -130,15 +133,17 @@ export const TableView = memo(function TableView({ board, onCardClick, onUpdateC
     if (!row) return;
 
     if (column === 'group') {
-      // Move card to different group
-      if (value !== row.group.id) onMoveCard(cardId, value);
+      // Change card's status
+      if (value !== row.card.statusId) {
+        onUpdateCard({ ...row.card, statusId: value });
+      }
       return;
     }
 
     const updated = { ...row.card };
     switch (column) {
       case 'title': updated.title = value || 'Untitled'; break;
-      case 'subGroup': updated.subGroupId = value; break;
+      case 'subGroup': updated.groupId = value; break;
       case 'priority': updated.priority = value as Priority; break;
       case 'dueDate': updated.dueDate = value; break;
       case 'label': updated.label = value; break;
@@ -158,11 +163,11 @@ export const TableView = memo(function TableView({ board, onCardClick, onUpdateC
     { value: 'critical', label: 'Critical' },
   ];
 
-  const groupOptions = board.groups.map(g => ({ value: g.id, label: g.title }));
+  const statusOptions = board.statuses.map(s => ({ value: s.id, label: s.name }));
 
-  const subGroupOptions = [
+  const groupOptions = [
     { value: '', label: 'None' },
-    ...board.subGroups.map(sg => ({ value: sg.id, label: sg.name })),
+    ...board.groups.map(g => ({ value: g.id, label: g.name })),
   ];
 
   return (
@@ -182,7 +187,7 @@ export const TableView = memo(function TableView({ board, onCardClick, onUpdateC
         </thead>
         <tbody>
           {sorted.map(row => {
-            const { card, group, subGroup } = row;
+            const { card, status, group } = row;
             const dateInfo = formatDueDate(card.dueDate);
             const totalTasks = card.checklist.length;
             const doneTasks = card.checklist.filter(i => i.done).length;
@@ -211,18 +216,18 @@ export const TableView = memo(function TableView({ board, onCardClick, onUpdateC
                 {/* Group */}
                 <td onDoubleClick={() => startEdit(card.id, 'group')}>
                   {isEditing(card.id, 'group') ? (
-                    <SelectCell value={group.id} options={groupOptions} onSave={v => saveCell(card.id, 'group', v)} />
+                    <SelectCell value={card.statusId} options={statusOptions} onSave={v => saveCell(card.id, 'group', v)} />
                   ) : (
-                    <span className="table-cell-muted">{group.title}</span>
+                    <span className="table-cell-muted">{status?.name || '-'}</span>
                   )}
                 </td>
 
-                {/* Sub-group */}
+                {/* Group */}
                 <td onDoubleClick={() => startEdit(card.id, 'subGroup')}>
                   {isEditing(card.id, 'subGroup') ? (
-                    <SelectCell value={card.subGroupId} options={subGroupOptions} onSave={v => saveCell(card.id, 'subGroup', v)} />
+                    <SelectCell value={card.groupId} options={groupOptions} onSave={v => saveCell(card.id, 'subGroup', v)} />
                   ) : (
-                    <span className="table-cell-muted">{subGroup?.name || '-'}</span>
+                    <span className="table-cell-muted">{group?.name || '-'}</span>
                   )}
                 </td>
 

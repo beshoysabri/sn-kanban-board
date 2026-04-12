@@ -2420,6 +2420,106 @@ body.sn-embedded {
 }
 
 /* ========================================
+   WIP Limit Inline Input
+   ======================================== */
+.wip-input-row {
+  padding: 4px 12px 8px;
+}
+
+.wip-input-inline {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid var(--kb-accent);
+  border-radius: var(--kb-radius-xs);
+  background: var(--kb-card-bg);
+  color: var(--kb-fg);
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+}
+
+/* ========================================
+   Schema Editor
+   ======================================== */
+.schema-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--kb-border);
+  margin-bottom: 16px;
+}
+
+.schema-tab {
+  padding: 8px 14px;
+  border: none;
+  background: transparent;
+  color: var(--kb-muted);
+  font-size: 12px;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all var(--kb-transition);
+  border-bottom: 2px solid transparent;
+}
+
+.schema-tab.active {
+  color: var(--kb-accent);
+  border-bottom-color: var(--kb-accent);
+}
+
+.schema-tab:hover:not(.active) {
+  color: var(--kb-fg);
+}
+
+.schema-items {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.schema-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.schema-item input,
+.schema-item select {
+  padding: 6px 8px;
+  border: 1px solid var(--kb-border);
+  border-radius: var(--kb-radius-xs);
+  background: var(--kb-card-bg);
+  color: var(--kb-fg);
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+}
+
+.schema-item input:focus,
+.schema-item select:focus {
+  border-color: var(--kb-accent);
+}
+
+.schema-delete-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: transparent;
+  color: var(--kb-muted);
+  border-radius: var(--kb-radius-xs);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: color var(--kb-transition);
+}
+
+.schema-delete-btn:hover {
+  color: var(--kb-danger);
+}
+
+/* ========================================
    Sub-group Rows (Notion-style)
    ======================================== */
 .sub-group-section {

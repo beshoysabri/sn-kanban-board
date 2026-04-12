@@ -8,7 +8,7 @@ interface Props {
 }
 
 export const AnalyticsView = memo(function AnalyticsView({ board }: Props) {
-  const allCards = board.groups.flatMap(g => g.cards);
+  const allCards = board.cards;
   const totalCards = allCards.length;
 
   // Due date stats
@@ -63,7 +63,8 @@ export const AnalyticsView = memo(function AnalyticsView({ board }: Props) {
   }
 
   // Max for lane bar chart
-  const maxGroupCards = Math.max(...board.groups.map(g => g.cards.length), 1);
+  const statusCounts = board.statuses.map(s => ({ ...s, count: board.cards.filter(c => c.statusId === s.id).length }));
+  const maxStatusCards = Math.max(...statusCounts.map(s => s.count), 1);
 
   const priorityColors: Record<string, string> = {
     critical: '#ef4444',
@@ -83,8 +84,8 @@ export const AnalyticsView = memo(function AnalyticsView({ board }: Props) {
             <span className="stats-card-value">{totalCards}</span>
           </div>
           <div className="stats-card">
-            <span className="stats-card-label">Groups</span>
-            <span className="stats-card-value">{board.groups.length}</span>
+            <span className="stats-card-label">Statuses</span>
+            <span className="stats-card-value">{board.statuses.length}</span>
           </div>
           <div className="stats-card">
             <span className="stats-card-label">Overdue</span>
@@ -103,23 +104,20 @@ export const AnalyticsView = memo(function AnalyticsView({ board }: Props) {
           </div>
         </div>
 
-        {/* Lane Distribution */}
+        {/* Status Distribution */}
         <div className="analytics-section">
-          <h3 className="analytics-section-title">Group Distribution</h3>
+          <h3 className="analytics-section-title">Status Distribution</h3>
           <div className="analytics-bars">
-            {board.groups.map(group => {
-              const color = getColorHex(group.color) || '#a1a1aa';
-              const pct = totalCards > 0 ? (group.cards.length / maxGroupCards) * 100 : 0;
+            {statusCounts.map(sc => {
+              const color = getColorHex(sc.color) || '#a1a1aa';
+              const pct = totalCards > 0 ? (sc.count / maxStatusCards) * 100 : 0;
               return (
-                <div key={group.id} className="analytics-bar-row">
-                  <span className="analytics-bar-label">{group.title}</span>
+                <div key={sc.id} className="analytics-bar-row">
+                  <span className="analytics-bar-label">{sc.name}</span>
                   <div className="analytics-bar-track">
-                    <div
-                      className="analytics-bar-fill"
-                      style={{ width: `${pct}%`, background: color }}
-                    />
+                    <div className="analytics-bar-fill" style={{ width: `${pct}%`, background: color }} />
                   </div>
-                  <span className="analytics-bar-value">{group.cards.length}</span>
+                  <span className="analytics-bar-value">{sc.count}</span>
                 </div>
               );
             })}
@@ -202,11 +200,11 @@ export const AnalyticsView = memo(function AnalyticsView({ board }: Props) {
               .slice(0, 8)
               .map(card => {
                 const dateInfo = formatDueDate(card.dueDate);
-                const lane = board.groups.find(g => g.cards.some(c => c.id === card.id));
+                const status = board.statuses.find(s => s.id === card.statusId);
                 return (
                   <div key={card.id} className="analytics-list-item">
                     <span className="analytics-list-title">{card.title}</span>
-                    <span className="analytics-list-lane">{lane?.title}</span>
+                    <span className="analytics-list-lane">{status?.name}</span>
                     {dateInfo && (
                       <span className={`card-date-badge date-${dateInfo.status}`}>{dateInfo.text}</span>
                     )}

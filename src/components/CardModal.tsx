@@ -2,17 +2,17 @@ import { useState, useRef, useEffect } from 'react';
 import { formatDueDate } from '../lib/dates';
 import { LABEL_COLORS, getColorHex } from '../lib/colors';
 import { Linkify } from './shared/Linkify';
-import type { KanbanCard, Priority, ChecklistItem, SubGroup } from '../types/kanban';
+import type { KanbanCard, KanbanBoard, Priority, ChecklistItem } from '../types/kanban';
 
 interface Props {
   card: KanbanCard;
-  subGroups: SubGroup[];
+  board: KanbanBoard;
   onSave: (card: KanbanCard) => void;
   onDelete: (cardId: string) => void;
   onClose: () => void;
 }
 
-export function CardModal({ card, subGroups, onSave, onDelete, onClose }: Props) {
+export function CardModal({ card, board, onSave, onDelete, onClose }: Props) {
   const [title, setTitle] = useState(card.title);
   const [description, setDescription] = useState(card.description);
   const [label, setLabel] = useState(card.label);
@@ -20,8 +20,11 @@ export function CardModal({ card, subGroups, onSave, onDelete, onClose }: Props)
   const [dueDate, setDueDate] = useState(card.dueDate);
   const [comments, setComments] = useState<string[]>([...card.comments]);
   const [priority, setPriority] = useState<Priority>(card.priority || '');
+  const [statusId, setStatusId] = useState(card.statusId || '');
+  const [groupId, setGroupId] = useState(card.groupId || '');
   const [subGroupId, setSubGroupId] = useState(card.subGroupId || '');
   const [checklist, setChecklist] = useState<ChecklistItem[]>([...(card.checklist || [])]);
+  const [customFields, setCustomFields] = useState<Record<string, string>>({ ...card.customFields });
   const [newCheckItem, setNewCheckItem] = useState('');
   const [newComment, setNewComment] = useState('');
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -39,8 +42,11 @@ export function CardModal({ card, subGroups, onSave, onDelete, onClose }: Props)
       dueDate,
       comments,
       priority,
+      statusId,
+      groupId,
       subGroupId,
       checklist,
+      customFields,
     });
     onClose();
   };
@@ -158,18 +164,32 @@ export function CardModal({ card, subGroups, onSave, onDelete, onClose }: Props)
             </div>
           </div>
 
-          {subGroups.length > 0 && (
+          {board.statuses.length > 0 && (
             <div className="modal-section">
-              <label className="modal-label">Sub-group</label>
-              <select
-                className="modal-input form-select"
-                value={subGroupId}
-                onChange={(e) => setSubGroupId(e.target.value)}
-              >
+              <label className="modal-label">Status</label>
+              <select className="modal-input form-select" value={statusId} onChange={e => setStatusId(e.target.value)}>
                 <option value="">None</option>
-                {subGroups.map(sg => (
-                  <option key={sg.id} value={sg.id}>{sg.name}</option>
-                ))}
+                {board.statuses.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+              </select>
+            </div>
+          )}
+
+          {board.groups.length > 0 && (
+            <div className="modal-section">
+              <label className="modal-label">Group</label>
+              <select className="modal-input form-select" value={groupId} onChange={e => setGroupId(e.target.value)}>
+                <option value="">None</option>
+                {board.groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
+              </select>
+            </div>
+          )}
+
+          {board.subGroups.length > 0 && (
+            <div className="modal-section">
+              <label className="modal-label">Sub-Group</label>
+              <select className="modal-input form-select" value={subGroupId} onChange={e => setSubGroupId(e.target.value)}>
+                <option value="">None</option>
+                {board.subGroups.map(sg => <option key={sg.id} value={sg.id}>{sg.name}</option>)}
               </select>
             </div>
           )}
@@ -295,6 +315,24 @@ export function CardModal({ card, subGroups, onSave, onDelete, onClose }: Props)
               )}
             </div>
           </div>
+
+          {board.fields.length > 0 && board.fields.map(field => (
+            <div key={field.id} className="modal-section">
+              <label className="modal-label">{field.name}</label>
+              {field.type === 'select' ? (
+                <select className="modal-input form-select" value={customFields[field.id] || ''}
+                  onChange={e => setCustomFields({ ...customFields, [field.id]: e.target.value })}>
+                  <option value="">None</option>
+                  {field.options?.map(o => <option key={o} value={o}>{o}</option>)}
+                </select>
+              ) : (
+                <input className="modal-input" type={field.type === 'number' ? 'number' : field.type === 'date' ? 'date' : 'text'}
+                  value={customFields[field.id] || ''}
+                  onChange={e => setCustomFields({ ...customFields, [field.id]: e.target.value })}
+                  placeholder={`Enter ${field.name.toLowerCase()}...`} />
+              )}
+            </div>
+          ))}
 
           <div className="modal-section">
             <label className="modal-label">
