@@ -1,10 +1,16 @@
-export type ViewMode = 'list' | 'board' | 'analytics';
+export type ViewMode = 'list' | 'board' | 'table' | 'analytics';
 
 export type Priority = 'low' | 'medium' | 'high' | 'critical' | '';
 
 export interface ChecklistItem {
   text: string;
   done: boolean;
+}
+
+export interface SubGroup {
+  id: string;
+  name: string;
+  color: string;
 }
 
 export interface BoardMeta {
@@ -19,23 +25,25 @@ export interface KanbanCard {
   description: string;
   label: string;
   labelColor: string;
-  dueDate: string; // ISO date string e.g. "2026-03-01" or ""
+  dueDate: string;
   comments: string[];
   priority: Priority;
   checklist: ChecklistItem[];
+  subGroupId: string;
 }
 
-export interface KanbanLane {
+export interface KanbanGroup {
   id: string;
   title: string;
-  color: string; // lane accent color name e.g. "Ocean" or hex "#32769B" or ""
+  color: string;
   cards: KanbanCard[];
-  wipLimit: number; // 0 = unlimited
+  wipLimit: number;
 }
 
 export interface KanbanBoard {
   meta: BoardMeta;
-  lanes: KanbanLane[];
+  groups: KanbanGroup[];
+  subGroups: SubGroup[];
 }
 
 export interface EditorState {

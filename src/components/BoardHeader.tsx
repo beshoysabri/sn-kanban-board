@@ -33,6 +33,15 @@ const VIEW_ICONS: { key: ViewMode; label: string; icon: React.ReactNode }[] = [
     ),
   },
   {
+    key: 'table',
+    label: 'Table',
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+        <rect x="3" y="3" width="18" height="18" rx="2" /><line x1="3" y1="9" x2="21" y2="9" /><line x1="3" y1="15" x2="21" y2="15" /><line x1="9" y1="3" x2="9" y2="21" />
+      </svg>
+    ),
+  },
+  {
     key: 'analytics',
     label: 'Analytics',
     icon: (
@@ -44,13 +53,7 @@ const VIEW_ICONS: { key: ViewMode; label: string; icon: React.ReactNode }[] = [
 ];
 
 export const BoardHeader = memo(function BoardHeader({
-  board,
-  onUpdateMeta,
-  onToggleSidebar,
-  onShowShortcuts,
-  onAddCard,
-  searchQuery,
-  onSearchChange,
+  board, onUpdateMeta, onToggleSidebar, onShowShortcuts, onAddCard, searchQuery, onSearchChange,
 }: Props) {
   const { meta } = board;
   const [editing, setEditing] = useState(false);
@@ -63,9 +66,7 @@ export const BoardHeader = memo(function BoardHeader({
   useEffect(() => { if (editing) { titleRef.current?.focus(); titleRef.current?.select(); } }, [editing]);
 
   const handleSave = () => {
-    const trimTitle = titleDraft.trim();
-    const trimDesc = descDraft.trim();
-    onUpdateMeta({ title: trimTitle, description: trimDesc });
+    onUpdateMeta({ title: titleDraft.trim(), description: descDraft.trim() });
     setEditing(false);
   };
 
@@ -81,27 +82,12 @@ export const BoardHeader = memo(function BoardHeader({
         </button>
         {editing ? (
           <div className="kb-title-edit">
-            <input
-              ref={titleRef}
-              className="kb-title-input"
-              value={titleDraft}
-              onChange={(e) => setTitleDraft(e.target.value)}
-              placeholder="Page title"
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') handleSave();
-                if (e.key === 'Escape') setEditing(false);
-              }}
-            />
-            <input
-              className="kb-subtitle-input"
-              value={descDraft}
-              onChange={(e) => setDescDraft(e.target.value)}
-              placeholder="Subtitle (optional)"
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') handleSave();
-                if (e.key === 'Escape') setEditing(false);
-              }}
-            />
+            <input ref={titleRef} className="kb-title-input" value={titleDraft}
+              onChange={(e) => setTitleDraft(e.target.value)} placeholder="Page title"
+              onKeyDown={(e) => { if (e.key === 'Enter') handleSave(); if (e.key === 'Escape') setEditing(false); }} />
+            <input className="kb-subtitle-input" value={descDraft}
+              onChange={(e) => setDescDraft(e.target.value)} placeholder="Subtitle (optional)"
+              onKeyDown={(e) => { if (e.key === 'Enter') handleSave(); if (e.key === 'Escape') setEditing(false); }} />
             <button className="btn-primary btn-sm" onClick={handleSave}>Save</button>
           </div>
         ) : (
@@ -113,12 +99,8 @@ export const BoardHeader = memo(function BoardHeader({
         {!editing && (
           <div className="kb-view-toggle">
             {VIEW_ICONS.map(v => (
-              <button
-                key={v.key}
-                className={`kb-view-btn ${meta.viewMode === v.key ? 'active' : ''}`}
-                onClick={() => onUpdateMeta({ viewMode: v.key })}
-                title={v.label}
-              >
+              <button key={v.key} className={`kb-view-btn ${meta.viewMode === v.key ? 'active' : ''}`}
+                onClick={() => onUpdateMeta({ viewMode: v.key })} title={v.label}>
                 {v.icon}
                 <span className="kb-view-btn-label">{v.label}</span>
               </button>
@@ -132,21 +114,14 @@ export const BoardHeader = memo(function BoardHeader({
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
             <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
           </svg>
-          <input
-            type="text"
-            placeholder="Search..."
-            value={searchQuery}
-            onChange={e => onSearchChange(e.target.value)}
-            className="kb-search-input"
-          />
+          <input type="text" placeholder="Search..." value={searchQuery}
+            onChange={e => onSearchChange(e.target.value)} className="kb-search-input" />
         </div>
         <ExportMenu board={board} />
         <button className="kb-icon-btn" onClick={onShowShortcuts} title="Keyboard shortcuts (?)">
           <span style={{ fontSize: 14, fontWeight: 700 }}>?</span>
         </button>
-        <button className="btn-primary kb-add-btn" onClick={onAddCard}>
-          + Card
-        </button>
+        <button className="btn-primary kb-add-btn" onClick={onAddCard}>+ Card</button>
       </div>
     </div>
   );

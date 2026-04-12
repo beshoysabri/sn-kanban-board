@@ -13,11 +13,11 @@ function downloadFile(content: string, filename: string, mimeType: string) {
 }
 
 export function exportCSV(board: KanbanBoard) {
-  const rows = [['Lane', 'Title', 'Description', 'Label', 'Due Date', 'Comments']];
-  for (const lane of board.lanes) {
-    for (const card of lane.cards) {
+  const rows = [['Group', 'Title', 'Description', 'Label', 'Due Date', 'Comments']];
+  for (const group of board.groups) {
+    for (const card of group.cards) {
       rows.push([
-        lane.title,
+        group.title,
         card.title,
         card.description,
         card.label,
@@ -40,10 +40,10 @@ export function exportMarkdown(board: KanbanBoard) {
     lines.push('', board.meta.description);
   }
   lines.push('');
-  for (const lane of board.lanes) {
-    lines.push(`## ${lane.title} (${lane.cards.length} cards)`);
+  for (const group of board.groups) {
+    lines.push(`## ${group.title} (${group.cards.length} cards)`);
     lines.push('');
-    for (const card of lane.cards) {
+    for (const card of group.cards) {
       lines.push(`- **${card.title}**`);
       if (card.description) lines.push(`  ${card.description}`);
       if (card.label) lines.push(`  Label: ${card.label}`);

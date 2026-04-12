@@ -3,24 +3,24 @@ import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-p
 import { getColorHex, hexToRgba } from '../lib/colors';
 import { formatDueDate } from '../lib/dates';
 import { Linkify } from './shared/Linkify';
-import type { KanbanLane, KanbanCard } from '../types/kanban';
+import type { KanbanGroup, KanbanCard } from '../types/kanban';
 
 interface Props {
-  lanes: KanbanLane[];
+  groups: KanbanGroup[];
   onCardClick: (card: KanbanCard) => void;
-  onAddCard: (laneId: string, title: string) => void;
-  onAddLane: (title: string) => void;
+  onAddCard: (groupId: string, title: string) => void;
+  onAddGroup: (title: string) => void;
   onDragEnd: (result: DropResult) => void;
 }
 
-export const ListView = memo(function ListView({ lanes, onCardClick, onAddCard, onAddLane, onDragEnd }: Props) {
+export const ListView = memo(function ListView({ groups, onCardClick, onAddCard, onAddGroup, onDragEnd }: Props) {
   const [addingGroup, setAddingGroup] = useState(false);
   const [newGroupTitle, setNewGroupTitle] = useState('');
 
   const submitGroup = () => {
     const trimmed = newGroupTitle.trim();
     if (trimmed) {
-      onAddLane(trimmed);
+      onAddGroup(trimmed);
       setNewGroupTitle('');
       setAddingGroup(false);
     }
@@ -29,7 +29,7 @@ export const ListView = memo(function ListView({ lanes, onCardClick, onAddCard, 
   return (
     <DragDropContext onDragEnd={onDragEnd}>
       <div className="list-view">
-        {lanes.map((lane) => (
+        {groups.map((lane) => (
           <ListGroup
             key={lane.id}
             lane={lane}
@@ -61,7 +61,7 @@ export const ListView = memo(function ListView({ lanes, onCardClick, onAddCard, 
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
             </svg>
-            Add Group
+            Add group
           </button>
         )}
       </div>
@@ -74,7 +74,7 @@ const ListGroup = memo(function ListGroup({
   onCardClick,
   onAddCard,
 }: {
-  lane: KanbanLane;
+  lane: KanbanGroup;
   onCardClick: (card: KanbanCard) => void;
   onAddCard: (laneId: string, title: string) => void;
 }) {

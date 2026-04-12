@@ -2,16 +2,17 @@ import { useState, useRef, useEffect } from 'react';
 import { formatDueDate } from '../lib/dates';
 import { LABEL_COLORS, getColorHex } from '../lib/colors';
 import { Linkify } from './shared/Linkify';
-import type { KanbanCard, Priority, ChecklistItem } from '../types/kanban';
+import type { KanbanCard, Priority, ChecklistItem, SubGroup } from '../types/kanban';
 
 interface Props {
   card: KanbanCard;
+  subGroups: SubGroup[];
   onSave: (card: KanbanCard) => void;
   onDelete: (cardId: string) => void;
   onClose: () => void;
 }
 
-export function CardModal({ card, onSave, onDelete, onClose }: Props) {
+export function CardModal({ card, subGroups, onSave, onDelete, onClose }: Props) {
   const [title, setTitle] = useState(card.title);
   const [description, setDescription] = useState(card.description);
   const [label, setLabel] = useState(card.label);
@@ -19,6 +20,7 @@ export function CardModal({ card, onSave, onDelete, onClose }: Props) {
   const [dueDate, setDueDate] = useState(card.dueDate);
   const [comments, setComments] = useState<string[]>([...card.comments]);
   const [priority, setPriority] = useState<Priority>(card.priority || '');
+  const [subGroupId, setSubGroupId] = useState(card.subGroupId || '');
   const [checklist, setChecklist] = useState<ChecklistItem[]>([...(card.checklist || [])]);
   const [newCheckItem, setNewCheckItem] = useState('');
   const [newComment, setNewComment] = useState('');
@@ -37,6 +39,7 @@ export function CardModal({ card, onSave, onDelete, onClose }: Props) {
       dueDate,
       comments,
       priority,
+      subGroupId,
       checklist,
     });
     onClose();
@@ -154,6 +157,22 @@ export function CardModal({ card, onSave, onDelete, onClose }: Props) {
               </label>
             </div>
           </div>
+
+          {subGroups.length > 0 && (
+            <div className="modal-section">
+              <label className="modal-label">Sub-group</label>
+              <select
+                className="modal-input form-select"
+                value={subGroupId}
+                onChange={(e) => setSubGroupId(e.target.value)}
+              >
+                <option value="">None</option>
+                {subGroups.map(sg => (
+                  <option key={sg.id} value={sg.id}>{sg.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <div className="modal-section">
             <label className="modal-label">Priority</label>

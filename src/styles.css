@@ -1218,8 +1218,15 @@ body.sn-embedded {
    ======================================== */
 .kb-layout {
   display: flex;
+  flex-direction: column;
   height: 100%;
   width: 100%;
+  overflow: hidden;
+}
+
+.kb-body {
+  display: flex;
+  flex: 1;
   overflow: hidden;
 }
 
@@ -2410,6 +2417,139 @@ body.sn-embedded {
     width: 100%;
     text-align: center;
   }
+}
+
+/* ========================================
+   Sub-group Rows (Notion-style)
+   ======================================== */
+.sub-group-section {
+  margin-bottom: 4px;
+}
+
+.sub-group-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  margin: 4px 0 2px;
+  border-radius: var(--kb-radius-xs);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--kb-muted);
+  user-select: none;
+}
+
+.sub-group-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.sub-group-name {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sub-group-count {
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--kb-muted);
+  opacity: 0.6;
+}
+
+/* ========================================
+   Table View
+   ======================================== */
+.table-view {
+  flex: 1;
+  overflow: auto;
+  padding: 0;
+}
+
+.kb-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.kb-table th {
+  position: sticky;
+  top: 0;
+  background: var(--kb-lane-bg);
+  border-bottom: 2px solid var(--kb-border);
+  padding: 10px 12px;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--kb-muted);
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+  z-index: 1;
+  transition: color var(--kb-transition);
+}
+
+.kb-table th:hover {
+  color: var(--kb-fg);
+}
+
+.kb-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--kb-border);
+  color: var(--kb-fg);
+  vertical-align: middle;
+}
+
+.kb-table tbody tr {
+  cursor: pointer;
+  transition: background var(--kb-transition);
+}
+
+.kb-table tbody tr:hover {
+  background: var(--kb-card-hover);
+}
+
+.kb-table tbody tr:nth-child(even) {
+  background: color-mix(in srgb, var(--kb-card-hover) 30%, transparent);
+}
+
+.kb-table tbody tr:nth-child(even):hover {
+  background: var(--kb-card-hover);
+}
+
+.sort-indicator {
+  display: inline-block;
+  margin-left: 4px;
+  font-size: 10px;
+  opacity: 0.6;
+}
+
+.table-cell-title {
+  font-weight: 500;
+  max-width: 250px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.table-cell-muted {
+  color: var(--kb-muted);
+  font-size: 12px;
+}
+
+.wip-badge {
+  font-size: 9px;
+  font-weight: 500;
+  color: var(--kb-muted);
+  opacity: 0.6;
+  margin-left: 2px;
 }
 
 /* ========================================

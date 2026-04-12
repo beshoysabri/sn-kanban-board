@@ -8,7 +8,7 @@ interface Props {
 }
 
 export const AnalyticsView = memo(function AnalyticsView({ board }: Props) {
-  const allCards = board.lanes.flatMap(l => l.cards);
+  const allCards = board.groups.flatMap(g => g.cards);
   const totalCards = allCards.length;
 
   // Due date stats
@@ -63,7 +63,7 @@ export const AnalyticsView = memo(function AnalyticsView({ board }: Props) {
   }
 
   // Max for lane bar chart
-  const maxLaneCards = Math.max(...board.lanes.map(l => l.cards.length), 1);
+  const maxGroupCards = Math.max(...board.groups.map(g => g.cards.length), 1);
 
   const priorityColors: Record<string, string> = {
     critical: '#ef4444',
@@ -83,8 +83,8 @@ export const AnalyticsView = memo(function AnalyticsView({ board }: Props) {
             <span className="stats-card-value">{totalCards}</span>
           </div>
           <div className="stats-card">
-            <span className="stats-card-label">Lanes</span>
-            <span className="stats-card-value">{board.lanes.length}</span>
+            <span className="stats-card-label">Groups</span>
+            <span className="stats-card-value">{board.groups.length}</span>
           </div>
           <div className="stats-card">
             <span className="stats-card-label">Overdue</span>
@@ -105,21 +105,21 @@ export const AnalyticsView = memo(function AnalyticsView({ board }: Props) {
 
         {/* Lane Distribution */}
         <div className="analytics-section">
-          <h3 className="analytics-section-title">Lane Distribution</h3>
+          <h3 className="analytics-section-title">Group Distribution</h3>
           <div className="analytics-bars">
-            {board.lanes.map(lane => {
-              const color = getColorHex(lane.color) || '#a1a1aa';
-              const pct = totalCards > 0 ? (lane.cards.length / maxLaneCards) * 100 : 0;
+            {board.groups.map(group => {
+              const color = getColorHex(group.color) || '#a1a1aa';
+              const pct = totalCards > 0 ? (group.cards.length / maxGroupCards) * 100 : 0;
               return (
-                <div key={lane.id} className="analytics-bar-row">
-                  <span className="analytics-bar-label">{lane.title}</span>
+                <div key={group.id} className="analytics-bar-row">
+                  <span className="analytics-bar-label">{group.title}</span>
                   <div className="analytics-bar-track">
                     <div
                       className="analytics-bar-fill"
                       style={{ width: `${pct}%`, background: color }}
                     />
                   </div>
-                  <span className="analytics-bar-value">{lane.cards.length}</span>
+                  <span className="analytics-bar-value">{group.cards.length}</span>
                 </div>
               );
             })}
@@ -202,7 +202,7 @@ export const AnalyticsView = memo(function AnalyticsView({ board }: Props) {
               .slice(0, 8)
               .map(card => {
                 const dateInfo = formatDueDate(card.dueDate);
-                const lane = board.lanes.find(l => l.cards.some(c => c.id === card.id));
+                const lane = board.groups.find(g => g.cards.some(c => c.id === card.id));
                 return (
                   <div key={card.id} className="analytics-list-item">
                     <span className="analytics-list-title">{card.title}</span>
