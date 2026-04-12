@@ -1,6 +1,7 @@
 import { memo, useState, useRef, useEffect, useCallback } from 'react';
 import { formatDueDate } from '../lib/dates';
 import { getFieldLabel } from '../lib/fields';
+import { getColorHex, hexToRgba } from '../lib/colors';
 import type { KanbanBoard, KanbanCard, StatusDef, GroupDef, Priority } from '../types/kanban';
 
 interface Props {
@@ -174,6 +175,131 @@ export const TableView = memo(function TableView({ board, onCardClick, onUpdateC
     ...board.groups.map(g => ({ value: g.id, label: g.name })),
   ];
 
+  // Grouping logic
+  const tableGroupBy = board.meta.tableGroupBy || '';
+  const tableSubGroupBy = board.meta.tableSubGroupBy || '';
+
+  function getGroupDefs(by: string): { id: string; name: string; color: string }[] {
+    if (by === 'status') return board.statuses.map(s => ({ id: s.id, name: s.name, color: s.color }));
+    if (by === 'group') return board.groups;
+    if (by === 'subGroup') return board.subGroups;
+    return [];
+  }
+
+  function getCardGroupField(by: string): (c: KanbanCard) => string {
+    if (by === 'status') return c => c.statusId;
+    if (by === 'group') return c => c.groupId;
+    if (by === 'subGroup') return c => c.subGroupId;
+    return () => '';
+  }
+
+  const groupDefs = getGroupDefs(tableGroupBy);
+  const getGroupField = getCardGroupField(tableGroupBy);
+  const subGroupDefs = getGroupDefs(tableSubGroupBy);
+  const getSubGroupField = getCardGroupField(tableSubGroupBy);
+  const hasGrouping = tableGroupBy && groupDefs.length > 0;
+
+  // Build grouped sections
+  const renderGroupedRows = () => {
+    if (!hasGrouping) {
+      return sorted.map(row => renderRow(row));
+    }
+
+    const sections: React.ReactNode[] = [];
+    for (const gDef of groupDefs) {
+      const gRows = sorted.filter(r => getGroupField(r.card) === gDef.id);
+      if (gRows.length === 0) continue;
+      const gColor = getColorHex(gDef.color);
+
+      sections.push(
+        <tr key={`g-${gDef.id}`} className="table-group-header-row">
+          <td colSpan={COLUMNS.length} style={gColor ? { borderLeft: `3px solid ${gColor}`, background: hexToRgba(gColor, 0.06) } : undefined}>
+            <span className="table-group-dot" style={gColor ? { background: gColor } : undefined} />
+            <strong>{gDef.name}</strong>
+            <span className="table-group-count">{gRows.length}</span>
+          </td>
+        </tr>
+      );
+
+      if (tableSubGroupBy && subGroupDefs.length > 0) {
+        for (const sgDef of subGroupDefs) {
+          const sgRows = gRows.filter(r => getSubGroupField(r.card) === sgDef.id);
+          if (sgRows.length === 0) continue;
+          const sgColor = getColorHex(sgDef.color);
+          sections.push(
+            <tr key={`sg-${gDef.id}-${sgDef.id}`} className="table-sub-group-header-row">
+              <td colSpan={COLUMNS.length} style={sgColor ? { borderLeft: `3px solid ${sgColor}`, background: hexToRgba(sgColor, 0.04) } : undefined}>
+                <span className="table-group-dot" style={sgColor ? { background: sgColor } : undefined} />
+                {sgDef.name}
+                <span className="table-group-count">{sgRows.length}</span>
+              </td>
+            </tr>
+          );
+          sgRows.forEach(row => sections.push(renderRow(row)));
+        }
+        // Ungrouped within this group
+        const ungrouped = gRows.filter(r => !getSubGroupField(r.card) || !subGroupDefs.some(sg => sg.id === getSubGroupField(r.card)));
+        if (ungrouped.length > 0) {
+          sections.push(
+            <tr key={`sg-${gDef.id}-ungrouped`} className="table-sub-group-header-row">
+              <td colSpan={COLUMNS.length}><span style={{ opacity: 0.5 }}>Ungrouped</span> <span className="table-group-count">{ungrouped.length}</span></td>
+            </tr>
+          );
+          ungrouped.forEach(row => sections.push(renderRow(row)));
+        }
+      } else {
+        gRows.forEach(row => sections.push(renderRow(row)));
+      }
+    }
+
+    // Cards not in any group
+    const orphans = sorted.filter(r => !getGroupField(r.card) || !groupDefs.some(g => g.id === getGroupField(r.card)));
+    if (orphans.length > 0) {
+      sections.push(
+        <tr key="g-ungrouped" className="table-group-header-row">
+          <td colSpan={COLUMNS.length}><span style={{ opacity: 0.5 }}>Ungrouped</span> <span className="table-group-count">{orphans.length}</span></td>
+        </tr>
+      );
+      orphans.forEach(row => sections.push(renderRow(row)));
+    }
+
+    return sections;
+  };
+
+  const renderRow = (row: Row) => {
+    const { card, status, group } = row;
+    const dateInfo = formatDueDate(card.dueDate);
+    const totalTasks = card.checklist.length;
+    const doneTasks = card.checklist.filter(i => i.done).length;
+
+    return (
+      <tr key={card.id}>
+        <td className="table-cell-title"
+          onClick={() => { if (clickTimer.current) clearTimeout(clickTimer.current); clickTimer.current = setTimeout(() => { onCardClick(card); clickTimer.current = null; }, 250); }}
+          onDoubleClick={() => { if (clickTimer.current) { clearTimeout(clickTimer.current); clickTimer.current = null; } startEdit(card.id, 'title'); }}>
+          {isEditing(card.id, 'title') ? <EditCell value={card.title} onSave={v => saveCell(card.id, 'title', v)} /> : card.title || 'Untitled'}
+        </td>
+        <td onDoubleClick={() => startEdit(card.id, 'group')}>
+          {isEditing(card.id, 'group') ? <SelectCell value={card.statusId} options={statusOptions} onSave={v => saveCell(card.id, 'group', v)} /> : <span className="table-cell-muted">{status?.name || '-'}</span>}
+        </td>
+        <td onDoubleClick={() => startEdit(card.id, 'subGroup')}>
+          {isEditing(card.id, 'subGroup') ? <SelectCell value={card.groupId} options={groupOptions} onSave={v => saveCell(card.id, 'subGroup', v)} /> : <span className="table-cell-muted">{group?.name || '-'}</span>}
+        </td>
+        <td onDoubleClick={() => startEdit(card.id, 'priority')}>
+          {isEditing(card.id, 'priority') ? <SelectCell value={card.priority} options={priorityOptions} onSave={v => saveCell(card.id, 'priority', v)} /> : card.priority ? <span className={`card-priority priority-${card.priority}`}>{card.priority}</span> : <span className="table-cell-muted">-</span>}
+        </td>
+        <td onDoubleClick={() => startEdit(card.id, 'dueDate')}>
+          {isEditing(card.id, 'dueDate') ? <EditCell value={card.dueDate} type="date" onSave={v => saveCell(card.id, 'dueDate', v)} /> : dateInfo ? <span className={`card-date-badge date-${dateInfo.status}`}>{dateInfo.text}</span> : <span className="table-cell-muted">-</span>}
+        </td>
+        <td onDoubleClick={() => startEdit(card.id, 'label')}>
+          {isEditing(card.id, 'label') ? <EditCell value={card.label} onSave={v => saveCell(card.id, 'label', v)} /> : card.label || <span className="table-cell-muted">-</span>}
+        </td>
+        <td className="table-cell-muted" onClick={() => onCardClick(card)}>{totalTasks > 0 ? `${doneTasks}/${totalTasks}` : '-'}</td>
+        <td className="table-cell-muted" onClick={() => onCardClick(card)}>{card.comments.length > 0 ? card.comments.length : '-'}</td>
+      </tr>
+    );
+  };
+
   return (
     <div className="table-view">
       <table className="kb-table">
@@ -190,90 +316,7 @@ export const TableView = memo(function TableView({ board, onCardClick, onUpdateC
           </tr>
         </thead>
         <tbody>
-          {sorted.map(row => {
-            const { card, status, group } = row;
-            const dateInfo = formatDueDate(card.dueDate);
-            const totalTasks = card.checklist.length;
-            const doneTasks = card.checklist.filter(i => i.done).length;
-
-            return (
-              <tr key={card.id}>
-                {/* Title — single click opens modal, double click edits inline */}
-                <td className="table-cell-title"
-                  onClick={() => {
-                    if (isEditing(card.id, 'title')) return;
-                    if (clickTimer.current) clearTimeout(clickTimer.current);
-                    clickTimer.current = setTimeout(() => { onCardClick(card); clickTimer.current = null; }, 250);
-                  }}
-                  onDoubleClick={() => {
-                    if (clickTimer.current) { clearTimeout(clickTimer.current); clickTimer.current = null; }
-                    startEdit(card.id, 'title');
-                  }}
-                >
-                  {isEditing(card.id, 'title') ? (
-                    <EditCell value={card.title} onSave={v => saveCell(card.id, 'title', v)} />
-                  ) : (
-                    card.title || 'Untitled'
-                  )}
-                </td>
-
-                {/* Group */}
-                <td onDoubleClick={() => startEdit(card.id, 'group')}>
-                  {isEditing(card.id, 'group') ? (
-                    <SelectCell value={card.statusId} options={statusOptions} onSave={v => saveCell(card.id, 'group', v)} />
-                  ) : (
-                    <span className="table-cell-muted">{status?.name || '-'}</span>
-                  )}
-                </td>
-
-                {/* Group */}
-                <td onDoubleClick={() => startEdit(card.id, 'subGroup')}>
-                  {isEditing(card.id, 'subGroup') ? (
-                    <SelectCell value={card.groupId} options={groupOptions} onSave={v => saveCell(card.id, 'subGroup', v)} />
-                  ) : (
-                    <span className="table-cell-muted">{group?.name || '-'}</span>
-                  )}
-                </td>
-
-                {/* Priority */}
-                <td onDoubleClick={() => startEdit(card.id, 'priority')}>
-                  {isEditing(card.id, 'priority') ? (
-                    <SelectCell value={card.priority} options={priorityOptions} onSave={v => saveCell(card.id, 'priority', v)} />
-                  ) : (
-                    card.priority ? <span className={`card-priority priority-${card.priority}`}>{card.priority}</span> : <span className="table-cell-muted">-</span>
-                  )}
-                </td>
-
-                {/* Due Date */}
-                <td onDoubleClick={() => startEdit(card.id, 'dueDate')}>
-                  {isEditing(card.id, 'dueDate') ? (
-                    <EditCell value={card.dueDate} type="date" onSave={v => saveCell(card.id, 'dueDate', v)} />
-                  ) : (
-                    dateInfo ? <span className={`card-date-badge date-${dateInfo.status}`}>{dateInfo.text}</span> : <span className="table-cell-muted">-</span>
-                  )}
-                </td>
-
-                {/* Label */}
-                <td onDoubleClick={() => startEdit(card.id, 'label')}>
-                  {isEditing(card.id, 'label') ? (
-                    <EditCell value={card.label} onSave={v => saveCell(card.id, 'label', v)} />
-                  ) : (
-                    card.label || <span className="table-cell-muted">-</span>
-                  )}
-                </td>
-
-                {/* Tasks (read-only, click opens modal) */}
-                <td className="table-cell-muted" onClick={() => onCardClick(card)}>
-                  {totalTasks > 0 ? `${doneTasks}/${totalTasks}` : '-'}
-                </td>
-
-                {/* Comments (read-only, click opens modal) */}
-                <td className="table-cell-muted" onClick={() => onCardClick(card)}>
-                  {card.comments.length > 0 ? card.comments.length : '-'}
-                </td>
-              </tr>
-            );
-          })}
+          {renderGroupedRows()}
           {sorted.length === 0 && (
             <tr><td colSpan={8} className="table-cell-muted" style={{ textAlign: 'center', padding: 24 }}>No cards yet</td></tr>
           )}

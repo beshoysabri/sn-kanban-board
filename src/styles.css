@@ -2845,6 +2845,58 @@ body.sn-embedded {
   background: var(--kb-card-hover);
 }
 
+.table-group-header-row td {
+  padding: 10px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--kb-fg);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.table-sub-group-header-row td {
+  padding: 6px 12px 6px 24px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--kb-muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.table-group-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.table-group-count {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--kb-muted);
+  opacity: 0.6;
+  margin-left: 4px;
+}
+
+/* List sub-group header */
+.list-sub-group-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--kb-muted);
+  border: 1px solid var(--kb-border);
+  border-top: none;
+}
+
 .sort-indicator {
   display: inline-block;
   margin-left: 4px;
