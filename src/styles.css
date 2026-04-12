@@ -2500,6 +2500,52 @@ body.sn-embedded {
   border-color: var(--kb-accent);
 }
 
+.schema-color-input {
+  width: 28px;
+  height: 28px;
+  border: 2px solid var(--kb-border);
+  border-radius: 50%;
+  padding: 0;
+  cursor: pointer;
+  background: none;
+  flex-shrink: 0;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.schema-color-input::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+.schema-color-input::-webkit-color-swatch {
+  border: none;
+  border-radius: 50%;
+}
+
+.schema-field-block {
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--kb-border);
+}
+
+.schema-field-block:last-of-type {
+  border-bottom: none;
+}
+
+.schema-select-options {
+  padding-left: 36px;
+  margin-top: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.schema-option-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .schema-delete-btn {
   display: flex;
   align-items: center;

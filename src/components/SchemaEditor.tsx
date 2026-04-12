@@ -147,22 +147,12 @@ export function SchemaEditor({ board, onUpdateBoard, onClose }: SchemaEditorProp
     <div className="schema-items">
       {draft.statuses.map((s, i) => (
         <div className="schema-item" key={s.id}>
-          <input
-            className="modal-input"
-            style={{ width: 140 }}
-            value={s.name}
-            onChange={(e) => updateStatus(i, 'name', e.target.value)}
-            placeholder="Status name"
-          />
-          <input
-            className="modal-input"
-            style={{ width: 60 }}
-            type="number"
-            min={0}
-            value={s.wipLimit}
-            onChange={(e) => updateStatus(i, 'wipLimit', Number(e.target.value))}
-            placeholder="WIP"
-          />
+          <input type="color" className="schema-color-input" value={s.color || '#888888'}
+            onChange={(e) => updateStatus(i, 'color', e.target.value)} title="Color" />
+          <input className="modal-input" style={{ width: 140 }} value={s.name}
+            onChange={(e) => updateStatus(i, 'name', e.target.value)} placeholder="Status name" />
+          <input className="modal-input" style={{ width: 60 }} type="number" min={0}
+            value={s.wipLimit} onChange={(e) => updateStatus(i, 'wipLimit', Number(e.target.value))} placeholder="WIP" />
           <button className="schema-delete-btn" onClick={() => deleteStatus(i)} aria-label="Delete status">
             <DeleteIcon />
           </button>
@@ -176,13 +166,10 @@ export function SchemaEditor({ board, onUpdateBoard, onClose }: SchemaEditorProp
     <div className="schema-items">
       {draft[key].map((g, i) => (
         <div className="schema-item" key={g.id}>
-          <input
-            className="modal-input"
-            style={{ width: 140 }}
-            value={g.name}
-            onChange={(e) => updateGroupItem(key, i, 'name', e.target.value)}
-            placeholder={`${label} name`}
-          />
+          <input type="color" className="schema-color-input" value={g.color || '#888888'}
+            onChange={(e) => updateGroupItem(key, i, 'color', e.target.value)} title="Color" />
+          <input className="modal-input" style={{ width: 140 }} value={g.name}
+            onChange={(e) => updateGroupItem(key, i, 'name', e.target.value)} placeholder={`${label} name`} />
           <button className="schema-delete-btn" onClick={() => deleteGroupItem(key, i)} aria-label={`Delete ${label.toLowerCase()}`}>
             <DeleteIcon />
           </button>
@@ -192,40 +179,66 @@ export function SchemaEditor({ board, onUpdateBoard, onClose }: SchemaEditorProp
     </div>
   );
 
+  const updateOptionColor = (fieldIndex: number, optionValue: string, color: string) => {
+    setDraft((d) => {
+      const next = structuredClone(d);
+      if (!next.fields[fieldIndex].optionColors) next.fields[fieldIndex].optionColors = {};
+      next.fields[fieldIndex].optionColors![optionValue] = color;
+      return next;
+    });
+  };
+
   const renderFields = () => (
     <div className="schema-items">
       {draft.fields.map((f, i) => (
-        <div className="schema-item" key={f.id}>
-          <input
-            className="modal-input"
-            style={{ width: 140 }}
-            value={f.name}
-            onChange={(e) => updateField(i, 'name', e.target.value)}
-            placeholder="Field name"
-          />
-          <select
-            className="modal-input form-select"
-            value={f.type}
-            onChange={(e) => updateField(i, 'type', e.target.value)}
-          >
-            {FIELD_TYPES.map((t) => (
-              <option key={t} value={t}>{t}</option>
-            ))}
-          </select>
+        <div key={f.id} className="schema-field-block">
+          <div className="schema-item">
+            <input className="modal-input" style={{ width: 140 }} value={f.name}
+              onChange={(e) => updateField(i, 'name', e.target.value)} placeholder="Field name" />
+            <select className="modal-input form-select" value={f.type}
+              onChange={(e) => updateField(i, 'type', e.target.value)}>
+              {FIELD_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+            </select>
+            <button className="schema-delete-btn" onClick={() => deleteField(i)} aria-label="Delete field">
+              <DeleteIcon />
+            </button>
+          </div>
           {f.type === 'select' && (
-            <input
-              className="modal-input"
-              style={{ width: 160 }}
-              value={(f.options ?? []).join(', ')}
-              onChange={(e) =>
-                updateField(i, 'options', e.target.value.split(',').map((o) => o.trim()).filter(Boolean))
-              }
-              placeholder="Options (comma-separated)"
-            />
+            <div className="schema-select-options">
+              {(f.options ?? []).map((opt, oi) => (
+                <div key={oi} className="schema-option-row">
+                  <input type="color" className="schema-color-input"
+                    value={f.optionColors?.[opt] || '#888888'}
+                    onChange={(e) => updateOptionColor(i, opt, e.target.value)} title={`Color for ${opt}`} />
+                  <input className="modal-input" style={{ width: 120 }} value={opt}
+                    onChange={(e) => {
+                      const newOpts = [...(f.options ?? [])];
+                      const oldVal = newOpts[oi];
+                      newOpts[oi] = e.target.value;
+                      updateField(i, 'options', newOpts);
+                      // Transfer color to new option name
+                      if (f.optionColors?.[oldVal]) {
+                        const colors = { ...f.optionColors };
+                        colors[e.target.value] = colors[oldVal];
+                        delete colors[oldVal];
+                        updateField(i, 'optionColors' as string, colors as unknown as string[]);
+                      }
+                    }}
+                    placeholder="Option value" />
+                  <button className="schema-delete-btn" onClick={() => {
+                    const newOpts = (f.options ?? []).filter((_, j) => j !== oi);
+                    updateField(i, 'options', newOpts);
+                  }}>
+                    <DeleteIcon />
+                  </button>
+                </div>
+              ))}
+              <button className="btn-sm btn-secondary" onClick={() => {
+                const newOpts = [...(f.options ?? []), ''];
+                updateField(i, 'options', newOpts);
+              }}>+ Option</button>
+            </div>
           )}
-          <button className="schema-delete-btn" onClick={() => deleteField(i)} aria-label="Delete field">
-            <DeleteIcon />
-          </button>
         </div>
       ))}
       <button className="btn-primary btn-sm" onClick={addField}>Add Field</button>

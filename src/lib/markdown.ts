@@ -80,7 +80,16 @@ export function parseMarkdown(markdown: string): EditorState {
           if (nameMatch) fname = nameMatch[1];
           const optsMatch = text.match(/\[options:([^\]]+)\]/);
           if (optsMatch) opts = optsMatch[1].split(',').map(s => s.trim());
-          if (id) fields.push({ id, name: fname || id, type: ftype as FieldDef['type'], ...(opts ? { options: opts } : {}) });
+          let optColors: Record<string, string> | undefined;
+          const colorsMatch = text.match(/\[colors:([^\]]+)\]/);
+          if (colorsMatch) {
+            optColors = {};
+            colorsMatch[1].split(',').forEach(pair => {
+              const [k, v] = pair.split('=');
+              if (k && v) optColors![k.trim()] = v.trim();
+            });
+          }
+          if (id) fields.push({ id, name: fname || id, type: ftype as FieldDef['type'], ...(opts ? { options: opts } : {}), ...(optColors ? { optionColors: optColors } : {}) });
           break;
         }
       }
@@ -207,6 +216,9 @@ export function boardToMarkdown(board: KanbanBoard): string {
   for (const f of board.fields) {
     let tags = ` [type:${f.type}] [name:${f.name}]`;
     if (f.options?.length) tags += ` [options:${f.options.join(',')}]`;
+    if (f.optionColors && Object.keys(f.optionColors).length > 0) {
+      tags += ` [colors:${Object.entries(f.optionColors).map(([k, v]) => `${k}=${v}`).join(',')}]`;
+    }
     parts.push(`@field: ${f.id}${tags}`);
   }
   parts.push('');

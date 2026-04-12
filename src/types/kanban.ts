@@ -14,6 +14,7 @@ export interface FieldDef {
   name: string;
   type: FieldType;
   options?: string[];
+  optionColors?: Record<string, string>; // option value → hex color
 }
 
 export interface StatusDef {
