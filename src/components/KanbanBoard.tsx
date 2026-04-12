@@ -211,14 +211,18 @@ export function KanbanBoard({ board, onChange }: Props) {
   );
 
   const handleAddCard = useCallback(
-    (columnId: string, title: string) => {
+    (columnId: string, title: string, subGroupId?: string) => {
       const cur = boardRef.current;
       const card = createNewCard(title);
       const field = getColumnField();
       card[field] = columnId;
-      // If column is status and there's a first status, set it
-      if (field === 'statusId') card.statusId = columnId;
-      else if (field === 'groupId') card.groupId = columnId;
+      // Set sub-group if provided
+      if (subGroupId) {
+        const sgBy = cur.meta.boardSubGroupBy || cur.meta.listSubGroupBy || '';
+        if (sgBy === 'group') card.groupId = subGroupId;
+        else if (sgBy === 'subGroup') card.subGroupId = subGroupId;
+        else if (sgBy === 'status') card.statusId = subGroupId;
+      }
       onChange({ ...cur, cards: [...cur.cards, card] });
       showToast('Card created');
     },
@@ -356,8 +360,9 @@ export function KanbanBoard({ board, onChange }: Props) {
 
   // --- Render Views ---
   const columns = getColumns();
-  // Board with search-filtered cards for passing to views
-  const viewBoard = searchQuery.trim() ? { ...board, cards: filteredCards } : board;
+  // Board with filtered/sorted cards for passing to views
+  const hasFilters = searchQuery.trim() || filterStatus || filterPriority || sortField;
+  const viewBoard = hasFilters ? { ...board, cards: filteredCards } : board;
 
   const renderView = () => {
     if (board.meta.viewMode === 'analytics') return <AnalyticsView board={viewBoard} />;

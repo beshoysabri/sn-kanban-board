@@ -8,7 +8,7 @@ import type { KanbanBoard, KanbanCard } from '../types/kanban';
 interface Props {
   board: KanbanBoard;
   onCardClick: (card: KanbanCard) => void;
-  onAddCard: (statusId: string, title: string) => void;
+  onAddCard: (columnId: string, title: string, subGroupId?: string) => void;
   onDragEnd: (result: DropResult) => void;
 }
 
@@ -78,7 +78,7 @@ export const ListView = memo(function ListView({ board, onCardClick, onAddCard, 
                                 <ListCard key={card.id} card={card} index={index} onClick={onCardClick} />
                               ))}
                               {provided.placeholder}
-                              <ListAddCard groupId={gDef.id} onAddCard={onAddCard} />
+                              <ListAddCard groupId={gDef.id} subGroupId={sgDef.id} onAddCard={onAddCard} />
                             </div>
                           )}
                         </Droppable>
@@ -157,13 +157,13 @@ function ListGroupHeader({ name, color, count }: { name: string; color: string; 
   );
 }
 
-function ListAddCard({ groupId, onAddCard }: { groupId: string; onAddCard: (id: string, title: string) => void }) {
+function ListAddCard({ groupId, subGroupId, onAddCard }: { groupId: string; subGroupId?: string; onAddCard: (id: string, title: string, sgId?: string) => void }) {
   const [adding, setAdding] = useState(false);
   const [newTitle, setNewTitle] = useState('');
 
   const submit = () => {
     const trimmed = newTitle.trim();
-    if (trimmed) { onAddCard(groupId, trimmed); setNewTitle(''); }
+    if (trimmed) { onAddCard(groupId, trimmed, subGroupId); setNewTitle(''); }
   };
 
   if (adding) {
