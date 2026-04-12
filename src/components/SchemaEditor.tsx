@@ -253,10 +253,10 @@ export function SchemaEditor({ board, onUpdateBoard, onClose }: SchemaEditorProp
       {draft.fields.length > 0 && <div className="schema-section-label" style={{ marginTop: 16 }}>Custom Fields</div>}
       {draft.fields.map((f, i) => (
         <div key={f.id} className="schema-field-block">
+          <LocalInput className="modal-input" style={{ width: '100%', marginBottom: 6 }} value={f.name}
+            onChange={v => updateField(i, 'name', v)} placeholder="Field name" />
           <div className="schema-item">
-            <LocalInput className="modal-input" style={{ flex: 1 }} value={f.name}
-              onChange={v => updateField(i, 'name', v)} placeholder="Field name" />
-            <select className="modal-input form-select" value={f.type}
+            <select className="modal-input form-select" style={{ flex: 1 }} value={f.type}
               onChange={e => updateField(i, 'type', e.target.value)}>
               {FIELD_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
             </select>
