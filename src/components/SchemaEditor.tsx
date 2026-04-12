@@ -1,8 +1,29 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { v4 as uuid } from 'uuid';
 import { Modal } from './shared/Modal.tsx';
 import { LABEL_COLORS, getColorHex } from '../lib/colors.ts';
 import { BUILTIN_FIELDS } from '../lib/fields.ts';
+
+/** Debounced text input — keeps local state to avoid parent re-render on every keystroke */
+function DebouncedInput({ value, onChange, placeholder, style, className }: {
+  value: string; onChange: (v: string) => void; placeholder?: string;
+  style?: React.CSSProperties; className?: string;
+}) {
+  const [local, setLocal] = useState(value);
+  const onChangeRef = useRef(onChange);
+  onChangeRef.current = onChange;
+
+  // Sync from parent when value changes externally
+  useEffect(() => { setLocal(value); }, [value]);
+
+  return (
+    <input className={className} style={style} value={local} placeholder={placeholder}
+      onChange={e => {
+        setLocal(e.target.value);
+        onChangeRef.current(e.target.value);
+      }} />
+  );
+}
 import type { KanbanBoard, FieldType } from '../types/kanban';
 
 type Tab = 'statuses' | 'groups' | 'subGroups' | 'fields' | 'layout';
@@ -174,8 +195,8 @@ export function SchemaEditor({ board, onUpdateBoard, onClose }: SchemaEditorProp
       {draft.statuses.map((s, i) => (
         <div className="schema-item" key={s.id}>
           <PaletteColorPicker value={s.color} onChange={hex => updateStatus(i, 'color', hex)} />
-          <input className="modal-input" style={{ flex: 1 }} value={s.name}
-            onChange={e => updateStatus(i, 'name', e.target.value)} placeholder="Status name" />
+          <DebouncedInput className="modal-input" style={{ flex: 1 }} value={s.name}
+            onChange={v => updateStatus(i, 'name', v)} placeholder="Status name" />
           <input className="modal-input" style={{ width: 50 }} type="number" min={0}
             value={s.wipLimit} onChange={e => updateStatus(i, 'wipLimit', Number(e.target.value))} placeholder="WIP" title="WIP Limit" />
           <button className="schema-delete-btn" onClick={() => deleteStatus(i)}><DeleteIcon /></button>
@@ -190,8 +211,8 @@ export function SchemaEditor({ board, onUpdateBoard, onClose }: SchemaEditorProp
       {draft[key].map((g, i) => (
         <div className="schema-item" key={g.id}>
           <PaletteColorPicker value={g.color} onChange={hex => updateGroupItem(key, i, 'color', hex)} />
-          <input className="modal-input" style={{ flex: 1 }} value={g.name}
-            onChange={e => updateGroupItem(key, i, 'name', e.target.value)} placeholder={`${label} name`} />
+          <DebouncedInput className="modal-input" style={{ flex: 1 }} value={g.name}
+            onChange={v => updateGroupItem(key, i, 'name', v)} placeholder={`${label} name`} />
           <button className="schema-delete-btn" onClick={() => deleteGroupItem(key, i)}><DeleteIcon /></button>
         </div>
       ))}
@@ -206,9 +227,9 @@ export function SchemaEditor({ board, onUpdateBoard, onClose }: SchemaEditorProp
       {BUILTIN_FIELDS.map(bf => (
         <div className="schema-item" key={bf.id}>
           <span className="schema-field-id">{bf.id}</span>
-          <input className="modal-input" style={{ flex: 1 }}
+          <DebouncedInput className="modal-input" style={{ flex: 1 }}
             value={draft.meta.fieldLabels?.[bf.id] || bf.defaultName}
-            onChange={e => updateFieldLabel(bf.id, e.target.value)}
+            onChange={v => updateFieldLabel(bf.id, v)}
             placeholder={bf.defaultName} />
         </div>
       ))}
@@ -218,8 +239,8 @@ export function SchemaEditor({ board, onUpdateBoard, onClose }: SchemaEditorProp
       {draft.fields.map((f, i) => (
         <div key={f.id} className="schema-field-block">
           <div className="schema-item">
-            <input className="modal-input" style={{ flex: 1 }} value={f.name}
-              onChange={e => updateField(i, 'name', e.target.value)} placeholder="Field name" />
+            <DebouncedInput className="modal-input" style={{ flex: 1 }} value={f.name}
+              onChange={v => updateField(i, 'name', v)} placeholder="Field name" />
             <select className="modal-input form-select" value={f.type}
               onChange={e => updateField(i, 'type', e.target.value)}>
               {FIELD_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
@@ -232,20 +253,22 @@ export function SchemaEditor({ board, onUpdateBoard, onClose }: SchemaEditorProp
                 <div key={oi} className="schema-option-row">
                   <PaletteColorPicker value={f.optionColors?.[opt] || ''}
                     onChange={hex => updateOptionColor(i, opt, hex)} />
-                  <input className="modal-input" style={{ flex: 1 }} value={opt}
-                    onChange={e => {
+                  <DebouncedInput className="modal-input" style={{ flex: 1 }} value={opt}
+                    onChange={v => {
                       setDraft(d => {
-                        const next = structuredClone(d);
-                        const field = next.fields[i];
-                        const oldVal = (field.options ?? [])[oi];
-                        if (!field.options) field.options = [];
-                        field.options[oi] = e.target.value;
-                        // Transfer color to new option name
-                        if (field.optionColors?.[oldVal]) {
-                          field.optionColors[e.target.value] = field.optionColors[oldVal];
-                          delete field.optionColors[oldVal];
-                        }
-                        return next;
+                        const fields = d.fields.map((field, fi) => {
+                          if (fi !== i) return field;
+                          const newOpts = [...(field.options ?? [])];
+                          const oldVal = newOpts[oi];
+                          newOpts[oi] = v;
+                          const newColors = field.optionColors ? { ...field.optionColors } : undefined;
+                          if (newColors?.[oldVal]) {
+                            newColors[v] = newColors[oldVal];
+                            delete newColors[oldVal];
+                          }
+                          return { ...field, options: newOpts, ...(newColors ? { optionColors: newColors } : {}) };
+                        });
+                        return { ...d, fields };
                       });
                     }}
                     placeholder="Option value" />
