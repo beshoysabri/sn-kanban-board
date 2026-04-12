@@ -1601,6 +1601,31 @@ body.sn-embedded {
   /* visible by default on desktop */
 }
 
+.kb-header-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.kb-control-select {
+  padding: 4px 24px 4px 8px;
+  border: 1px solid var(--kb-border);
+  border-radius: var(--kb-radius-xs);
+  background: var(--kb-card-bg);
+  color: var(--kb-muted);
+  font-size: 11px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color var(--kb-transition);
+}
+
+.kb-control-select:hover,
+.kb-control-select:focus {
+  border-color: var(--kb-accent);
+  color: var(--kb-fg);
+}
+
 .kb-header-right {
   display: flex;
   align-items: center;

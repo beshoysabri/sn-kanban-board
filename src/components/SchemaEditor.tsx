@@ -64,11 +64,10 @@ export function SchemaEditor({ board, onUpdateBoard, onClose }: SchemaEditorProp
 
   /* ---- Statuses ---- */
   const updateStatus = (index: number, field: string, value: string | number) => {
-    setDraft(d => {
-      const next = structuredClone(d);
-      (next.statuses[index] as unknown as Record<string, unknown>)[field] = value;
-      return next;
-    });
+    setDraft(d => ({
+      ...d,
+      statuses: d.statuses.map((s, i) => i === index ? { ...s, [field]: value } : s),
+    }));
   };
 
   const addStatus = () => {
@@ -88,11 +87,10 @@ export function SchemaEditor({ board, onUpdateBoard, onClose }: SchemaEditorProp
 
   /* ---- Groups / Sub-Groups ---- */
   const updateGroupItem = (key: 'groups' | 'subGroups', index: number, field: string, value: string) => {
-    setDraft(d => {
-      const next = structuredClone(d);
-      (next[key][index] as unknown as Record<string, unknown>)[field] = value;
-      return next;
-    });
+    setDraft(d => ({
+      ...d,
+      [key]: d[key].map((g, i) => i === index ? { ...g, [field]: value } : g),
+    }));
   };
 
   const addGroupItem = (key: 'groups' | 'subGroups') => {
@@ -114,10 +112,13 @@ export function SchemaEditor({ board, onUpdateBoard, onClose }: SchemaEditorProp
   /* ---- Fields ---- */
   const updateField = (index: number, field: string, value: string | string[]) => {
     setDraft(d => {
-      const next = structuredClone(d);
-      (next.fields[index] as unknown as Record<string, unknown>)[field] = value;
-      if (field === 'type' && value !== 'select') { delete next.fields[index].options; delete next.fields[index].optionColors; }
-      return next;
+      const fields = d.fields.map((f, i) => {
+        if (i !== index) return f;
+        const updated = { ...f, [field]: value };
+        if (field === 'type' && value !== 'select') { delete updated.options; delete updated.optionColors; }
+        return updated;
+      });
+      return { ...d, fields };
     });
   };
 

@@ -382,8 +382,10 @@ export function KanbanBoard({ board, onChange }: Props) {
                     </div>
                     {columns.map(col => {
                       const cellCards = getCardsForColumn(col.id).filter(c => getSubGroupField(c) === sg.id);
+                      const cellColor = getColorHex(col.color);
                       return (
-                        <div key={col.id} className="kanban-grid-cell">
+                        <div key={col.id} className="kanban-grid-cell"
+                          style={cellColor ? { borderTop: `2px solid ${hexToRgba(cellColor, 0.3)}` } : undefined}>
                           <Droppable droppableId={`${col.id}__${sg.id}`} type="CARD">
                             {(provided, snapshot) => (
                               <div ref={provided.innerRef} {...provided.droppableProps}

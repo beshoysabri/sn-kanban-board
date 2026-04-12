@@ -38,6 +38,13 @@ export const BoardHeader = memo(function BoardHeader({
     setEditing(false);
   };
 
+  // Per-view groupBy/subGroupBy keys
+  const viewPrefix = meta.viewMode === 'list' ? 'list' : meta.viewMode === 'table' ? 'table' : 'board';
+  const groupByKey = `${viewPrefix}GroupBy`;
+  const subGroupByKey = `${viewPrefix}SubGroupBy`;
+  const currentGroupBy = (meta as unknown as Record<string, string>)[groupByKey] || 'status';
+  const currentSubGroupBy = (meta as unknown as Record<string, string>)[subGroupByKey] || '';
+
   return (
     <div className="kb-header">
       <div className="kb-header-left">
@@ -74,6 +81,25 @@ export const BoardHeader = memo(function BoardHeader({
           </div>
         )}
       </div>
+
+      {/* View-specific group-by / sub-group-by / sort controls */}
+      {!editing && meta.viewMode !== 'analytics' && (
+        <div className="kb-header-controls">
+          <select className="kb-control-select form-select" title="Group by"
+            value={currentGroupBy} onChange={e => onUpdateMeta({ [groupByKey]: e.target.value })}>
+            <option value="status">Group: Status</option>
+            <option value="group">Group: Group</option>
+          </select>
+          <select className="kb-control-select form-select" title="Sub-group by"
+            value={currentSubGroupBy} onChange={e => onUpdateMeta({ [subGroupByKey]: e.target.value })}>
+            <option value="">Swim: None</option>
+            <option value="group">Swim: Group</option>
+            <option value="subGroup">Swim: Sub-Group</option>
+            <option value="status">Swim: Status</option>
+          </select>
+        </div>
+      )}
+
       <div className="kb-header-right">
         <div className="kb-search-bar">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
