@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, memo } from 'react';
 import { Droppable } from '@hello-pangea/dnd';
 import { KanbanCardComponent } from './KanbanCard';
 import { getColorHex, hexToRgba, LABEL_COLORS } from '../lib/colors';
-import type { KanbanCard, KanbanBoard, GroupDef } from '../types/kanban';
+import type { KanbanCard } from '../types/kanban';
 
 interface ColumnDef {
   id: string;
@@ -14,19 +14,20 @@ interface ColumnDef {
 interface Props {
   column: ColumnDef;
   cards: KanbanCard[];
-  board: KanbanBoard;
-  subGroupBy: string;
   onCardClick: (card: KanbanCard) => void;
   onAddCard: (columnId: string, title: string) => void;
   onDeleteColumn: (id: string) => void;
   onRenameColumn: (id: string, name: string) => void;
   onSetColumnColor: (id: string, color: string) => void;
   onSetWipLimit: (id: string, limit: number) => void;
+  showHeader?: boolean;
+  showAddCard?: boolean;
 }
 
 export const KanbanColumnComponent = memo(function KanbanColumnComponent({
-  column, cards, board, subGroupBy, onCardClick, onAddCard,
+  column, cards, onCardClick, onAddCard,
   onDeleteColumn, onRenameColumn, onSetColumnColor, onSetWipLimit,
+  showHeader = true, showAddCard = true,
 }: Props) {
   const [isEditing, setIsEditing] = useState(false);
   const [title, setTitle] = useState(column.name);
@@ -67,34 +68,12 @@ export const KanbanColumnComponent = memo(function KanbanColumnComponent({
     if (trimmed) { onAddCard(column.id, trimmed); setNewCardTitle(''); }
   };
 
-  // Resolve sub-group definitions for row rendering
-  const getSubGroupRows = (): { def: GroupDef | null; cards: KanbanCard[] }[] => {
-    if (!subGroupBy) return [{ def: null, cards }];
-
-    let defs: GroupDef[] = [];
-    let getField: (c: KanbanCard) => string = () => '';
-
-    if (subGroupBy === 'group') { defs = board.groups; getField = c => c.groupId; }
-    else if (subGroupBy === 'subGroup') { defs = board.subGroups; getField = c => c.subGroupId; }
-    else return [{ def: null, cards }];
-
-    const rows: { def: GroupDef | null; cards: KanbanCard[] }[] = [];
-    for (const d of defs) {
-      const filtered = cards.filter(c => getField(c) === d.id);
-      if (filtered.length > 0) rows.push({ def: d, cards: filtered });
-    }
-    const ungrouped = cards.filter(c => !getField(c) || !defs.some(d => d.id === getField(c)));
-    if (ungrouped.length > 0) rows.push({ def: null, cards: ungrouped });
-    return rows.length > 0 ? rows : [{ def: null, cards }];
-  };
-
-  const subGroupRows = getSubGroupRows();
-  const hasSubGroups = subGroupRows.length > 1 || (subGroupRows.length === 1 && subGroupRows[0].def !== null);
+  // Cards are now always flat — sub-group grid is handled at the board level
 
   return (
     <div className={`kanban-lane ${colColor ? 'lane-tinted' : ''} ${wipExceeded ? 'wip-exceeded' : ''}`}
       style={colColor ? { '--lane-accent': colColor } as React.CSSProperties : undefined}>
-      <div className="lane-header" style={colColor ? { background: hexToRgba(colColor, 0.08) } : undefined}>
+      {showHeader && <div className="lane-header" style={colColor ? { background: hexToRgba(colColor, 0.08) } : undefined}>
         <span className="kb-lane-dot" style={{ backgroundColor: colColor || '#a1a1aa' }} />
         {isEditing ? (
           <input ref={inputRef} className="lane-title-input" value={title}
@@ -162,43 +141,21 @@ export const KanbanColumnComponent = memo(function KanbanColumnComponent({
             </div>
           )}
         </div>
-      </div>
+      </div>}
 
       <Droppable droppableId={column.id} type="CARD">
         {(provided, snapshot) => (
           <div ref={provided.innerRef} {...provided.droppableProps}
             className={`lane-cards ${snapshot.isDraggingOver ? 'drag-over' : ''}`}>
-            {hasSubGroups ? (
-              subGroupRows.map((row) => {
-                const sgColor = row.def ? (getColorHex(row.def.color) || '#a1a1aa') : '';
-                return (
-                  <div key={row.def?.id || '__ungrouped'} className="sub-group-section">
-                    {row.def && (
-                      <div className="sub-group-header" style={sgColor ? { background: hexToRgba(sgColor, 0.1) } : undefined}>
-                        <span className="sub-group-dot" style={{ background: sgColor }} />
-                        <span className="sub-group-name">{row.def.name}</span>
-                        <span className="sub-group-count">{row.cards.length}</span>
-                      </div>
-                    )}
-                    {!row.def && <div className="sub-group-header"><span className="sub-group-name" style={{ opacity: 0.5 }}>Ungrouped</span></div>}
-                    {row.cards.map(card => {
-                      const globalIdx = cards.indexOf(card);
-                      return <KanbanCardComponent key={card.id} card={card} index={globalIdx} onClick={onCardClick} />;
-                    })}
-                  </div>
-                );
-              })
-            ) : (
-              cards.map((card, index) => (
-                <KanbanCardComponent key={card.id} card={card} index={index} onClick={onCardClick} />
-              ))
-            )}
+            {cards.map((card, index) => (
+              <KanbanCardComponent key={card.id} card={card} index={index} onClick={onCardClick} />
+            ))}
             {provided.placeholder}
           </div>
         )}
       </Droppable>
 
-      {addingCard ? (
+      {showAddCard && (addingCard ? (
         <div className="inline-add-card">
           <input ref={cardInputRef} className="inline-card-input" value={newCardTitle}
             onChange={e => setNewCardTitle(e.target.value)} placeholder="Card title..."
@@ -216,7 +173,7 @@ export const KanbanColumnComponent = memo(function KanbanColumnComponent({
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
           Add Card
         </button>
-      )}
+      ))}
     </div>
   );
 });

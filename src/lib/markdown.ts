@@ -7,6 +7,8 @@ import type {
 const DEFAULT_META: BoardMeta = {
   title: '', description: '', viewMode: 'list',
   boardGroupBy: 'status', boardSubGroupBy: '',
+  listGroupBy: 'status', listSubGroupBy: '',
+  tableGroupBy: '', tableSubGroupBy: '',
 };
 
 const VALID_VIEWS: ViewMode[] = ['list', 'board', 'table', 'analytics'];
@@ -47,6 +49,10 @@ export function parseMarkdown(markdown: string): EditorState {
         }
         case 'groupby': meta.boardGroupBy = value.trim() || 'status'; break;
         case 'subgroupby': meta.boardSubGroupBy = value.trim(); break;
+        case 'listgroupby': meta.listGroupBy = value.trim() || 'status'; break;
+        case 'listsubgroupby': meta.listSubGroupBy = value.trim(); break;
+        case 'tablegroupby': meta.tableGroupBy = value.trim(); break;
+        case 'tablesubgroupby': meta.tableSubGroupBy = value.trim(); break;
         case 'fieldlabel': {
           // Format: @fieldlabel: fieldId=Custom Name
           const eqIdx = value.indexOf('=');
@@ -207,6 +213,10 @@ export function boardToMarkdown(board: KanbanBoard): string {
   parts.push(`@view: ${board.meta.viewMode}`);
   if (board.meta.boardGroupBy !== 'status') parts.push(`@groupby: ${board.meta.boardGroupBy}`);
   if (board.meta.boardSubGroupBy) parts.push(`@subgroupby: ${board.meta.boardSubGroupBy}`);
+  if (board.meta.listGroupBy && board.meta.listGroupBy !== 'status') parts.push(`@listgroupby: ${board.meta.listGroupBy}`);
+  if (board.meta.listSubGroupBy) parts.push(`@listsubgroupby: ${board.meta.listSubGroupBy}`);
+  if (board.meta.tableGroupBy) parts.push(`@tablegroupby: ${board.meta.tableGroupBy}`);
+  if (board.meta.tableSubGroupBy) parts.push(`@tablesubgroupby: ${board.meta.tableSubGroupBy}`);
   if (board.meta.fieldLabels) {
     for (const [id, label] of Object.entries(board.meta.fieldLabels)) {
       if (label) parts.push(`@fieldlabel: ${id}=${label}`);

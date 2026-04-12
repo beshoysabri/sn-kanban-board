@@ -223,16 +223,19 @@ export function SchemaEditor({ board, onUpdateBoard, onClose }: SchemaEditorProp
                     onChange={hex => updateOptionColor(i, opt, hex)} />
                   <input className="modal-input" style={{ flex: 1 }} value={opt}
                     onChange={e => {
-                      const newOpts = [...(f.options ?? [])];
-                      const oldVal = newOpts[oi];
-                      newOpts[oi] = e.target.value;
-                      updateField(i, 'options', newOpts);
-                      if (f.optionColors?.[oldVal]) {
-                        const colors = { ...f.optionColors };
-                        colors[e.target.value] = colors[oldVal];
-                        delete colors[oldVal];
-                        updateField(i, 'optionColors' as string, colors as unknown as string[]);
-                      }
+                      setDraft(d => {
+                        const next = structuredClone(d);
+                        const field = next.fields[i];
+                        const oldVal = (field.options ?? [])[oi];
+                        if (!field.options) field.options = [];
+                        field.options[oi] = e.target.value;
+                        // Transfer color to new option name
+                        if (field.optionColors?.[oldVal]) {
+                          field.optionColors[e.target.value] = field.optionColors[oldVal];
+                          delete field.optionColors[oldVal];
+                        }
+                        return next;
+                      });
                     }}
                     placeholder="Option value" />
                   <button className="schema-delete-btn" onClick={() => {
@@ -251,26 +254,46 @@ export function SchemaEditor({ board, onUpdateBoard, onClose }: SchemaEditorProp
     </div>
   );
 
+  const groupByOptions = (
+    <>
+      <option value="status">Status</option>
+      <option value="group">Group</option>
+    </>
+  );
+  const subGroupByOptions = (
+    <>
+      <option value="">None</option>
+      <option value="group">Group</option>
+      <option value="subGroup">Sub-Group</option>
+      <option value="status">Status</option>
+    </>
+  );
+
+  const renderLayoutSection = (label: string, groupByKey: string, subGroupByKey: string) => (
+    <>
+      <div className="schema-section-label">{label}</div>
+      <div className="schema-item">
+        <label className="modal-label" style={{ flex: 1 }}>Columns</label>
+        <select className="modal-input form-select" value={(draft.meta as unknown as Record<string, string>)[groupByKey] || 'status'}
+          onChange={e => updateMeta(groupByKey, e.target.value)}>
+          {groupByOptions}
+        </select>
+      </div>
+      <div className="schema-item">
+        <label className="modal-label" style={{ flex: 1 }}>Swim Lanes</label>
+        <select className="modal-input form-select" value={(draft.meta as unknown as Record<string, string>)[subGroupByKey] || ''}
+          onChange={e => updateMeta(subGroupByKey, e.target.value)}>
+          {subGroupByOptions}
+        </select>
+      </div>
+    </>
+  );
+
   const renderLayout = () => (
     <div className="schema-items">
-      <div className="schema-item">
-        <label className="modal-label" style={{ flex: 1 }}>Columns (Group By)</label>
-        <select className="modal-input form-select" value={draft.meta.boardGroupBy}
-          onChange={e => updateMeta('boardGroupBy', e.target.value)}>
-          <option value="status">Status</option>
-          <option value="group">Group</option>
-        </select>
-      </div>
-      <div className="schema-item">
-        <label className="modal-label" style={{ flex: 1 }}>Swim Lanes (Sub-Group By)</label>
-        <select className="modal-input form-select" value={draft.meta.boardSubGroupBy}
-          onChange={e => updateMeta('boardSubGroupBy', e.target.value)}>
-          <option value="">None</option>
-          <option value="group">Group</option>
-          <option value="subGroup">Sub-Group</option>
-          <option value="status">Status</option>
-        </select>
-      </div>
+      {renderLayoutSection('Board View', 'boardGroupBy', 'boardSubGroupBy')}
+      {renderLayoutSection('List View', 'listGroupBy', 'listSubGroupBy')}
+      {renderLayoutSection('Table View', 'tableGroupBy', 'tableSubGroupBy')}
     </div>
   );
 

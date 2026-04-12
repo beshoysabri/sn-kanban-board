@@ -2640,6 +2640,82 @@ body.sn-embedded {
 }
 
 /* ========================================
+   Kanban Grid Layout (sub-groups as rows)
+   ======================================== */
+.kanban-board.kanban-grid {
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+}
+
+.kanban-grid-header-row {
+  display: flex;
+  gap: 8px;
+  padding: 0 8px;
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--kb-bg);
+}
+
+.kanban-grid-col-header {
+  flex: 1;
+  min-width: 200px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  border-radius: var(--kb-radius-xs);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--kb-muted);
+}
+
+.kanban-grid-col-name {
+  flex: 1;
+}
+
+.kanban-grid-row {
+  display: flex;
+  gap: 8px;
+  padding: 0 8px;
+  margin-bottom: 6px;
+}
+
+.kanban-grid-row-label {
+  width: 120px;
+  min-width: 120px;
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 8px 10px;
+  border-radius: var(--kb-radius-xs);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--kb-muted);
+  flex-shrink: 0;
+}
+
+.kanban-grid-cell {
+  flex: 1;
+  min-width: 200px;
+  background: var(--kb-lane-bg);
+  border: 1px solid var(--kb-border);
+  border-radius: var(--kb-radius-sm);
+  min-height: 60px;
+}
+
+.kanban-grid-cell .lane-cards {
+  padding: 4px;
+  min-height: 40px;
+}
+
+/* ========================================
    Sub-group Rows (Notion-style)
    ======================================== */
 .sub-group-section {

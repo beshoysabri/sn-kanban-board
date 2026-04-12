@@ -1,12 +1,14 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-pangea/dnd';
 import { KanbanColumnComponent } from './KanbanColumn';
+import { KanbanCardComponent } from './KanbanCard';
 import { CardModal } from './CardModal';
 import { BoardHeader } from './BoardHeader';
 import { BoardSidebar } from './BoardSidebar';
 import { ListView } from './ListView';
 import { AnalyticsView } from './AnalyticsView';
 import { ShortcutsHelp } from './shared/ShortcutsHelp';
+import { getColorHex, hexToRgba } from '../lib/colors';
 import { createNewCard, createNewStatus, createDefaultBoard } from '../lib/markdown';
 import type { KanbanBoard as BoardType, KanbanCard, BoardMeta } from '../types/kanban';
 
@@ -73,6 +75,16 @@ export function KanbanBoard({ board, onChange }: Props) {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [showShortcuts]);
 
+  // --- Search filtering ---
+  const filteredCards = searchQuery.trim()
+    ? board.cards.filter(c => {
+        const q = searchQuery.toLowerCase();
+        return c.title.toLowerCase().includes(q)
+          || c.description.toLowerCase().includes(q)
+          || c.label.toLowerCase().includes(q);
+      })
+    : board.cards;
+
   // --- Helpers ---
   const getColumns = useCallback(() => {
     const groupBy = board.meta.boardGroupBy || 'status';
@@ -86,8 +98,8 @@ export function KanbanBoard({ board, onChange }: Props) {
 
   const getCardsForColumn = useCallback((columnId: string) => {
     const field = getColumnField();
-    return board.cards.filter(c => c[field] === columnId);
-  }, [board.cards, getColumnField]);
+    return filteredCards.filter(c => c[field] === columnId);
+  }, [filteredCards, getColumnField]);
 
   // --- Card Mutations ---
   const handleUpdateMeta = useCallback(
@@ -307,74 +319,169 @@ export function KanbanBoard({ board, onChange }: Props) {
 
   // --- Render Views ---
   const columns = getColumns();
+  // Board with search-filtered cards for passing to views
+  const viewBoard = searchQuery.trim() ? { ...board, cards: filteredCards } : board;
 
   const renderView = () => {
     if (board.meta.viewMode === 'analytics') return <AnalyticsView board={board} />;
     if (board.meta.viewMode === 'table') {
-      if (TableView) return <TableView board={board} onCardClick={setEditingCard} onUpdateCard={handleSaveCard} onMoveCard={handleMoveCard} />;
+      if (TableView) return <TableView board={viewBoard} onCardClick={setEditingCard} onUpdateCard={handleSaveCard} onMoveCard={handleMoveCard} />;
       return <div className="loading"><div className="loading-spinner" /></div>;
     }
     if (board.meta.viewMode === 'list') {
       return (
         <ListView
-          board={board}
+          board={viewBoard}
           onCardClick={setEditingCard}
           onAddCard={handleAddCard}
           onDragEnd={handleDragEnd}
         />
       );
     }
+    // Compute sub-group rows for grid layout
+    const subGroupBy = board.meta.boardSubGroupBy;
+    let subGroupDefs: { id: string; name: string; color: string }[] = [];
+    let getSubGroupField: (c: KanbanCard) => string = () => '';
+    if (subGroupBy === 'group') { subGroupDefs = board.groups; getSubGroupField = c => c.groupId; }
+    else if (subGroupBy === 'subGroup') { subGroupDefs = board.subGroups; getSubGroupField = c => c.subGroupId; }
+
+    const hasGridLayout = subGroupBy && subGroupDefs.length > 0;
+
     return (
       <DragDropContext onDragEnd={handleDragEnd}>
-        <Droppable droppableId="board" type="LANE" direction="horizontal">
-          {(provided) => (
-            <div className="kanban-board" ref={provided.innerRef} {...provided.droppableProps}>
-              {columns.map((col, index) => (
-                <Draggable key={col.id} draggableId={col.id} index={index}>
-                  {(provided, snapshot) => (
-                    <div ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps}
-                      className={`lane-wrapper ${snapshot.isDragging ? 'lane-dragging' : ''}`}>
-                      <KanbanColumnComponent
-                        column={col}
-                        cards={getCardsForColumn(col.id)}
-                        board={board}
-                        subGroupBy={board.meta.boardSubGroupBy}
-                        onCardClick={setEditingCard}
-                        onAddCard={handleAddCard}
-                        onDeleteColumn={handleDeleteColumn}
-                        onRenameColumn={handleRenameColumn}
-                        onSetColumnColor={handleSetColumnColor}
-                        onSetWipLimit={handleSetWipLimit}
-                      />
-                    </div>
-                  )}
-                </Draggable>
-              ))}
-              {provided.placeholder}
-              <div className="add-lane-container">
-                {addingColumn ? (
-                  <div className="add-lane-form">
-                    <input className="add-lane-input" value={newColumnTitle}
-                      onChange={e => setNewColumnTitle(e.target.value)} placeholder="Status name..." autoFocus
-                      onKeyDown={e => { if (e.key === 'Enter') handleAddColumnFromForm(); if (e.key === 'Escape') { setAddingColumn(false); setNewColumnTitle(''); } }}
-                      onBlur={() => { if (!newColumnTitle.trim()) setAddingColumn(false); }} />
-                    <div className="add-lane-buttons">
-                      <button className="confirm-add-lane" onClick={handleAddColumnFromForm}>Add</button>
-                      <button className="cancel-add-lane" onClick={() => { setAddingColumn(false); setNewColumnTitle(''); }}>Cancel</button>
-                    </div>
+        <div className={`kanban-board ${hasGridLayout ? 'kanban-grid' : ''}`}>
+          {/* Column headers row */}
+          {hasGridLayout && (
+            <div className="kanban-grid-header-row">
+              <div className="kanban-grid-row-label" />
+              {columns.map(col => {
+                const colColor = getColorHex(col.color);
+                return (
+                  <div key={col.id} className="kanban-grid-col-header" style={colColor ? { background: hexToRgba(colColor, 0.08) } : undefined}>
+                    <span className="kb-lane-dot" style={{ backgroundColor: colColor || '#a1a1aa' }} />
+                    <span className="kanban-grid-col-name">{col.name}</span>
+                    <span className="kb-lane-count" style={colColor ? { background: hexToRgba(colColor, 0.15), color: colColor } : undefined}>
+                      {getCardsForColumn(col.id).length}
+                    </span>
                   </div>
-                ) : (
-                  <button className="add-lane-btn" onClick={() => setAddingColumn(true)}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                      <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
-                    </svg>
-                    Add Status
-                  </button>
-                )}
-              </div>
+                );
+              })}
             </div>
           )}
-        </Droppable>
+
+          {hasGridLayout ? (
+            // Grid layout: sub-group rows × columns
+            <>
+              {subGroupDefs.map(sg => {
+                const sgColor = getColorHex(sg.color) || '#a1a1aa';
+                return (
+                  <div key={sg.id} className="kanban-grid-row">
+                    <div className="kanban-grid-row-label" style={{ background: hexToRgba(sgColor, 0.08) }}>
+                      <span className="sub-group-dot" style={{ background: sgColor }} />
+                      <span className="sub-group-name">{sg.name}</span>
+                    </div>
+                    {columns.map(col => {
+                      const cellCards = getCardsForColumn(col.id).filter(c => getSubGroupField(c) === sg.id);
+                      return (
+                        <div key={col.id} className="kanban-grid-cell">
+                          <Droppable droppableId={`${col.id}__${sg.id}`} type="CARD">
+                            {(provided, snapshot) => (
+                              <div ref={provided.innerRef} {...provided.droppableProps}
+                                className={`lane-cards ${snapshot.isDraggingOver ? 'drag-over' : ''}`}>
+                                {cellCards.map((card, idx) => (
+                                  <KanbanCardComponent key={card.id} card={card} index={idx} onClick={setEditingCard} />
+                                ))}
+                                {provided.placeholder}
+                              </div>
+                            )}
+                          </Droppable>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })}
+              {/* Ungrouped row */}
+              {(() => {
+                const ungrouped = filteredCards.filter(c => !getSubGroupField(c) || !subGroupDefs.some(sg => sg.id === getSubGroupField(c)));
+                if (ungrouped.length === 0) return null;
+                return (
+                  <div className="kanban-grid-row">
+                    <div className="kanban-grid-row-label"><span className="sub-group-name" style={{ opacity: 0.5 }}>Ungrouped</span></div>
+                    {columns.map(col => {
+                      const field = getColumnField();
+                      const cellCards = ungrouped.filter(c => c[field] === col.id);
+                      return (
+                        <div key={col.id} className="kanban-grid-cell">
+                          <Droppable droppableId={`${col.id}__ungrouped`} type="CARD">
+                            {(provided, snapshot) => (
+                              <div ref={provided.innerRef} {...provided.droppableProps}
+                                className={`lane-cards ${snapshot.isDraggingOver ? 'drag-over' : ''}`}>
+                                {cellCards.map((card, idx) => (
+                                  <KanbanCardComponent key={card.id} card={card} index={idx} onClick={setEditingCard} />
+                                ))}
+                                {provided.placeholder}
+                              </div>
+                            )}
+                          </Droppable>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
+            </>
+          ) : (
+            // Standard column layout (no sub-grouping)
+            <Droppable droppableId="board" type="LANE" direction="horizontal">
+              {(provided) => (
+                <div className="kanban-board-inner" ref={provided.innerRef} {...provided.droppableProps} style={{ display: 'contents' }}>
+                  {columns.map((col, index) => (
+                    <Draggable key={col.id} draggableId={col.id} index={index}>
+                      {(provided, snapshot) => (
+                        <div ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps}
+                          className={`lane-wrapper ${snapshot.isDragging ? 'lane-dragging' : ''}`}>
+                          <KanbanColumnComponent
+                            column={col}
+                            cards={getCardsForColumn(col.id)}
+                            onCardClick={setEditingCard}
+                            onAddCard={handleAddCard}
+                            onDeleteColumn={handleDeleteColumn}
+                            onRenameColumn={handleRenameColumn}
+                            onSetColumnColor={handleSetColumnColor}
+                            onSetWipLimit={handleSetWipLimit}
+                          />
+                        </div>
+                      )}
+                    </Draggable>
+                  ))}
+                  {provided.placeholder}
+                  <div className="add-lane-container">
+                    {addingColumn ? (
+                      <div className="add-lane-form">
+                        <input className="add-lane-input" value={newColumnTitle}
+                          onChange={e => setNewColumnTitle(e.target.value)} placeholder="Status name..." autoFocus
+                          onKeyDown={e => { if (e.key === 'Enter') handleAddColumnFromForm(); if (e.key === 'Escape') { setAddingColumn(false); setNewColumnTitle(''); } }}
+                          onBlur={() => { if (!newColumnTitle.trim()) setAddingColumn(false); }} />
+                        <div className="add-lane-buttons">
+                          <button className="confirm-add-lane" onClick={handleAddColumnFromForm}>Add</button>
+                          <button className="cancel-add-lane" onClick={() => { setAddingColumn(false); setNewColumnTitle(''); }}>Cancel</button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button className="add-lane-btn" onClick={() => setAddingColumn(true)}>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                          <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+                        </svg>
+                        Add Status
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+            </Droppable>
+          )}
+        </div>
       </DragDropContext>
     );
   };
