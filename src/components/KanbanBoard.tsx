@@ -169,17 +169,18 @@ export function KanbanBoard({ board, onChange }: Props) {
       const srcParsed = parseDroppableId(source.droppableId);
       const destParsed = parseDroppableId(destination.droppableId);
 
-      // Find the card in the source column's ordered cards
-      const srcCards = cards.filter(c => c[field] === srcParsed.colId);
-      const card = srcCards[source.index];
-      if (!card) return;
+      // Find the card using FILTERED cards (matches what the view renders)
+      const viewSrcCards = filteredCards.filter(c => c[field] === srcParsed.colId);
+      const draggedCard = viewSrcCards[source.index];
+      if (!draggedCard) return;
 
-      // Remove from current position
-      const cardIdx = cards.findIndex(c => c.id === card.id);
+      // Remove from full array by ID
+      const cardIdx = cards.findIndex(c => c.id === draggedCard.id);
+      if (cardIdx === -1) return;
       cards.splice(cardIdx, 1);
 
       // Update column assignment if cross-column
-      const updatedCard = { ...card };
+      const updatedCard = { ...draggedCard };
       if (srcParsed.colId !== destParsed.colId) {
         updatedCard[field] = destParsed.colId;
       }
@@ -319,7 +320,10 @@ export function KanbanBoard({ board, onChange }: Props) {
   const handleSetWipLimit = useCallback(
     (columnId: string, limit: number) => {
       const cur = boardRef.current;
-      onChange({ ...cur, statuses: cur.statuses.map(s => s.id === columnId ? { ...s, wipLimit: limit } : s) });
+      // WIP limits only apply to statuses
+      if (cur.statuses.some(s => s.id === columnId)) {
+        onChange({ ...cur, statuses: cur.statuses.map(s => s.id === columnId ? { ...s, wipLimit: limit } : s) });
+      }
     },
     [onChange]
   );

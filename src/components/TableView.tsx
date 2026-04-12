@@ -11,7 +11,7 @@ interface Props {
   onMoveCard: (cardId: string, toColumnId: string) => void;
 }
 
-type SortKey = 'title' | 'status' | 'group' | 'subGroup' | 'priority' | 'dueDate' | 'label' | 'tasks' | 'comments';
+type SortKey = string; // 'title' | 'status' | 'group' | ... | custom field IDs
 type SortDir = 'asc' | 'desc';
 
 interface Row {
@@ -23,9 +23,9 @@ interface Row {
 
 const PRIORITY_ORDER: Record<Priority, number> = { critical: 4, high: 3, medium: 2, low: 1, '': 0 };
 
-function getColumns(board: KanbanBoard): { key: SortKey; label: string; editable: boolean }[] {
+function getColumns(board: KanbanBoard): { key: SortKey; label: string; editable: boolean; isCustom?: boolean }[] {
   const fl = (id: string) => getFieldLabel(id, board.meta);
-  return [
+  const builtIn = [
     { key: 'title', label: fl('title'), editable: true },
     { key: 'status', label: fl('status'), editable: true },
     { key: 'group', label: fl('group'), editable: true },
@@ -36,6 +36,11 @@ function getColumns(board: KanbanBoard): { key: SortKey; label: string; editable
     { key: 'tasks', label: fl('checklist'), editable: false },
     { key: 'comments', label: fl('comments'), editable: false },
   ];
+  // Add custom field columns
+  const custom = board.fields.map(f => ({
+    key: `cf_${f.id}`, label: f.name, editable: true, isCustom: true,
+  }));
+  return [...builtIn, ...custom];
 }
 
 function compareRows(a: Row, b: Row, sortKey: SortKey, sortDir: SortDir): number {
@@ -55,6 +60,13 @@ function compareRows(a: Row, b: Row, sortKey: SortKey, sortDir: SortDir): number
       cmp = aD - bD || aT - bT; break;
     }
     case 'comments': cmp = a.card.comments.length - b.card.comments.length; break;
+    default:
+      // Custom field sort
+      if (sortKey.startsWith('cf_')) {
+        const fId = sortKey.slice(3);
+        cmp = (a.card.customFields[fId] || '').localeCompare(b.card.customFields[fId] || '');
+      }
+      break;
   }
   return sortDir === 'asc' ? cmp : -cmp;
 }
@@ -148,7 +160,14 @@ export const TableView = memo(function TableView({ board, onCardClick, onUpdateC
       case 'priority': updated.priority = value as Priority; break;
       case 'dueDate': updated.dueDate = value; break;
       case 'label': updated.label = value; break;
-      default: return;
+      default:
+        // Custom field
+        if (column.startsWith('cf_')) {
+          const fId = column.slice(3);
+          updated.customFields = { ...updated.customFields, [fId]: value };
+          break;
+        }
+        return;
     }
     onUpdateCard(updated);
   }, [rows, onUpdateCard]);
@@ -300,6 +319,25 @@ export const TableView = memo(function TableView({ board, onCardClick, onUpdateC
         </td>
         <td className="table-cell-muted" onClick={() => onCardClick(card)}>{totalTasks > 0 ? `${doneTasks}/${totalTasks}` : '-'}</td>
         <td className="table-cell-muted" onClick={() => onCardClick(card)}>{card.comments.length > 0 ? card.comments.length : '-'}</td>
+        {board.fields.map(f => {
+          const cfKey = `cf_${f.id}`;
+          const cfVal = card.customFields[f.id] || '';
+          return (
+            <td key={cfKey} onDoubleClick={() => startEdit(card.id, cfKey)}>
+              {isEditing(card.id, cfKey) ? (
+                f.type === 'select' ? (
+                  <SelectCell value={cfVal} options={[{ value: '', label: '-' }, ...(f.options || []).map(o => ({ value: o, label: o }))]}
+                    onSave={v => saveCell(card.id, cfKey, v)} />
+                ) : (
+                  <EditCell value={cfVal} type={f.type === 'number' ? 'number' : f.type === 'date' ? 'date' : 'text'}
+                    onSave={v => saveCell(card.id, cfKey, v)} />
+                )
+              ) : (
+                <span className="table-cell-muted">{cfVal || '-'}</span>
+              )}
+            </td>
+          );
+        })}
       </tr>
     );
   };

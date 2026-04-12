@@ -85,6 +85,7 @@ export function SchemaEditor({ board, onUpdateBoard, onClose }: SchemaEditorProp
 
   const deleteStatus = (index: number) => {
     setDraft(d => {
+      if (d.statuses.length <= 1) return d; // Prevent deleting last status
       const next = structuredClone(d);
       const removedId = next.statuses[index].id;
       next.statuses.splice(index, 1);
