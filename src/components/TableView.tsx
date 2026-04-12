@@ -1,11 +1,13 @@
-import { memo, useState } from 'react';
-import { getColorHex } from '../lib/colors';
+import { memo, useState, useRef, useEffect, useCallback } from 'react';
+// colors not needed for table view
 import { formatDueDate } from '../lib/dates';
 import type { KanbanBoard, KanbanCard, KanbanGroup, SubGroup, Priority } from '../types/kanban';
 
 interface Props {
   board: KanbanBoard;
   onCardClick: (card: KanbanCard) => void;
+  onUpdateCard: (card: KanbanCard) => void;
+  onMoveCard: (cardId: string, toGroupId: string) => void;
 }
 
 type SortKey = 'title' | 'group' | 'subGroup' | 'priority' | 'dueDate' | 'label' | 'tasks' | 'comments';
@@ -17,76 +19,95 @@ interface Row {
   subGroup: SubGroup | undefined;
 }
 
-const PRIORITY_ORDER: Record<Priority, number> = {
-  critical: 4,
-  high: 3,
-  medium: 2,
-  low: 1,
-  '': 0,
-};
+const PRIORITY_ORDER: Record<Priority, number> = { critical: 4, high: 3, medium: 2, low: 1, '': 0 };
 
-const COLUMNS: { key: SortKey; label: string }[] = [
-  { key: 'title', label: 'Title' },
-  { key: 'group', label: 'Group' },
-  { key: 'subGroup', label: 'Sub-group' },
-  { key: 'priority', label: 'Priority' },
-  { key: 'dueDate', label: 'Due Date' },
-  { key: 'label', label: 'Label' },
-  { key: 'tasks', label: 'Tasks' },
-  { key: 'comments', label: 'Comments' },
+const COLUMNS: { key: SortKey; label: string; editable: boolean }[] = [
+  { key: 'title', label: 'Title', editable: true },
+  { key: 'group', label: 'Group', editable: true },
+  { key: 'subGroup', label: 'Sub-group', editable: true },
+  { key: 'priority', label: 'Priority', editable: true },
+  { key: 'dueDate', label: 'Due Date', editable: true },
+  { key: 'label', label: 'Label', editable: true },
+  { key: 'tasks', label: 'Tasks', editable: false },
+  { key: 'comments', label: 'Comments', editable: false },
 ];
 
 function compareRows(a: Row, b: Row, sortKey: SortKey, sortDir: SortDir): number {
   let cmp = 0;
-
   switch (sortKey) {
-    case 'title':
-      cmp = a.card.title.localeCompare(b.card.title);
-      break;
-    case 'group':
-      cmp = a.group.title.localeCompare(b.group.title);
-      break;
-    case 'subGroup': {
-      const aName = a.subGroup?.name || '';
-      const bName = b.subGroup?.name || '';
-      cmp = aName.localeCompare(bName);
-      break;
-    }
-    case 'priority':
-      cmp = PRIORITY_ORDER[a.card.priority] - PRIORITY_ORDER[b.card.priority];
-      break;
-    case 'dueDate':
-      cmp = (a.card.dueDate || '').localeCompare(b.card.dueDate || '');
-      break;
-    case 'label':
-      cmp = a.card.label.localeCompare(b.card.label);
-      break;
+    case 'title': cmp = a.card.title.localeCompare(b.card.title); break;
+    case 'group': cmp = a.group.title.localeCompare(b.group.title); break;
+    case 'subGroup': cmp = (a.subGroup?.name || '').localeCompare(b.subGroup?.name || ''); break;
+    case 'priority': cmp = PRIORITY_ORDER[a.card.priority] - PRIORITY_ORDER[b.card.priority]; break;
+    case 'dueDate': cmp = (a.card.dueDate || '').localeCompare(b.card.dueDate || ''); break;
+    case 'label': cmp = a.card.label.localeCompare(b.card.label); break;
     case 'tasks': {
-      const aTotal = a.card.checklist.length;
-      const bTotal = b.card.checklist.length;
-      const aDone = aTotal ? a.card.checklist.filter((i) => i.done).length / aTotal : 0;
-      const bDone = bTotal ? b.card.checklist.filter((i) => i.done).length / bTotal : 0;
-      cmp = aDone - bDone || aTotal - bTotal;
-      break;
+      const aT = a.card.checklist.length, bT = b.card.checklist.length;
+      const aD = aT ? a.card.checklist.filter(i => i.done).length / aT : 0;
+      const bD = bT ? b.card.checklist.filter(i => i.done).length / bT : 0;
+      cmp = aD - bD || aT - bT; break;
     }
-    case 'comments':
-      cmp = a.card.comments.length - b.card.comments.length;
-      break;
+    case 'comments': cmp = a.card.comments.length - b.card.comments.length; break;
   }
-
   return sortDir === 'asc' ? cmp : -cmp;
 }
 
-export const TableView = memo(function TableView({ board, onCardClick }: Props) {
+// Inline edit cell
+function EditCell({ value, onSave, type = 'text' }: {
+  value: string; onSave: (v: string) => void; type?: string;
+}) {
+  const ref = useRef<HTMLInputElement>(null);
+  const [draft, setDraft] = useState(value);
+
+  useEffect(() => { ref.current?.focus(); ref.current?.select(); }, []);
+
+  const commit = () => { onSave(draft); };
+
+  return (
+    <input
+      ref={ref}
+      type={type}
+      className="table-edit-input"
+      value={draft}
+      onChange={e => setDraft(e.target.value)}
+      onBlur={commit}
+      onKeyDown={e => { if (e.key === 'Enter') commit(); if (e.key === 'Escape') onSave(value); }}
+      onClick={e => e.stopPropagation()}
+    />
+  );
+}
+
+function SelectCell({ value, options, onSave }: {
+  value: string; options: { value: string; label: string }[]; onSave: (v: string) => void;
+}) {
+  const ref = useRef<HTMLSelectElement>(null);
+  useEffect(() => { ref.current?.focus(); }, []);
+
+  return (
+    <select
+      ref={ref}
+      className="table-edit-select form-select"
+      value={value}
+      onChange={e => onSave(e.target.value)}
+      onBlur={() => onSave(value)}
+      onClick={e => e.stopPropagation()}
+    >
+      {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+    </select>
+  );
+}
+
+export const TableView = memo(function TableView({ board, onCardClick, onUpdateCard, onMoveCard }: Props) {
   const [sortKey, setSortKey] = useState<SortKey>('title');
   const [sortDir, setSortDir] = useState<SortDir>('asc');
+  const [editingCell, setEditingCell] = useState<{ cardId: string; column: SortKey } | null>(null);
+  const clickTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const subGroupMap = new Map(board.subGroups.map((sg) => [sg.id, sg]));
+  const subGroupMap = new Map(board.subGroups.map(sg => [sg.id, sg]));
 
-  const rows: Row[] = board.groups.flatMap((group) =>
-    group.cards.map((card) => ({
-      card,
-      group,
+  const rows: Row[] = board.groups.flatMap(group =>
+    group.cards.map(card => ({
+      card, group,
       subGroup: card.subGroupId ? subGroupMap.get(card.subGroupId) : undefined,
     })),
   );
@@ -94,20 +115,62 @@ export const TableView = memo(function TableView({ board, onCardClick }: Props) 
   const sorted = [...rows].sort((a, b) => compareRows(a, b, sortKey, sortDir));
 
   const handleSort = (key: SortKey) => {
-    if (key === sortKey) {
-      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
-    } else {
-      setSortKey(key);
-      setSortDir('asc');
-    }
+    if (key === sortKey) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+    else { setSortKey(key); setSortDir('asc'); }
   };
+
+  const startEdit = useCallback((cardId: string, column: SortKey) => {
+    const col = COLUMNS.find(c => c.key === column);
+    if (col?.editable) setEditingCell({ cardId, column });
+  }, []);
+
+  const saveCell = useCallback((cardId: string, column: SortKey, value: string) => {
+    setEditingCell(null);
+    const row = rows.find(r => r.card.id === cardId);
+    if (!row) return;
+
+    if (column === 'group') {
+      // Move card to different group
+      if (value !== row.group.id) onMoveCard(cardId, value);
+      return;
+    }
+
+    const updated = { ...row.card };
+    switch (column) {
+      case 'title': updated.title = value || 'Untitled'; break;
+      case 'subGroup': updated.subGroupId = value; break;
+      case 'priority': updated.priority = value as Priority; break;
+      case 'dueDate': updated.dueDate = value; break;
+      case 'label': updated.label = value; break;
+      default: return;
+    }
+    onUpdateCard(updated);
+  }, [rows, onUpdateCard, onMoveCard]);
+
+  const isEditing = (cardId: string, col: SortKey) =>
+    editingCell?.cardId === cardId && editingCell?.column === col;
+
+  const priorityOptions = [
+    { value: '', label: 'None' },
+    { value: 'low', label: 'Low' },
+    { value: 'medium', label: 'Medium' },
+    { value: 'high', label: 'High' },
+    { value: 'critical', label: 'Critical' },
+  ];
+
+  const groupOptions = board.groups.map(g => ({ value: g.id, label: g.title }));
+
+  const subGroupOptions = [
+    { value: '', label: 'None' },
+    ...board.subGroups.map(sg => ({ value: sg.id, label: sg.name })),
+  ];
 
   return (
     <div className="table-view">
       <table className="kb-table">
         <thead>
           <tr>
-            {COLUMNS.map((col) => (
+            {COLUMNS.map(col => (
               <th key={col.key} onClick={() => handleSort(col.key)}>
                 {col.label}
                 {sortKey === col.key && (
@@ -118,54 +181,95 @@ export const TableView = memo(function TableView({ board, onCardClick }: Props) 
           </tr>
         </thead>
         <tbody>
-          {sorted.map((row) => (
-            <TableRow key={row.card.id} row={row} onClick={onCardClick} />
-          ))}
+          {sorted.map(row => {
+            const { card, group, subGroup } = row;
+            const dateInfo = formatDueDate(card.dueDate);
+            const totalTasks = card.checklist.length;
+            const doneTasks = card.checklist.filter(i => i.done).length;
+
+            return (
+              <tr key={card.id}>
+                {/* Title — single click opens modal, double click edits inline */}
+                <td className="table-cell-title"
+                  onClick={() => {
+                    if (isEditing(card.id, 'title')) return;
+                    if (clickTimer.current) clearTimeout(clickTimer.current);
+                    clickTimer.current = setTimeout(() => { onCardClick(card); clickTimer.current = null; }, 250);
+                  }}
+                  onDoubleClick={() => {
+                    if (clickTimer.current) { clearTimeout(clickTimer.current); clickTimer.current = null; }
+                    startEdit(card.id, 'title');
+                  }}
+                >
+                  {isEditing(card.id, 'title') ? (
+                    <EditCell value={card.title} onSave={v => saveCell(card.id, 'title', v)} />
+                  ) : (
+                    card.title || 'Untitled'
+                  )}
+                </td>
+
+                {/* Group */}
+                <td onDoubleClick={() => startEdit(card.id, 'group')}>
+                  {isEditing(card.id, 'group') ? (
+                    <SelectCell value={group.id} options={groupOptions} onSave={v => saveCell(card.id, 'group', v)} />
+                  ) : (
+                    <span className="table-cell-muted">{group.title}</span>
+                  )}
+                </td>
+
+                {/* Sub-group */}
+                <td onDoubleClick={() => startEdit(card.id, 'subGroup')}>
+                  {isEditing(card.id, 'subGroup') ? (
+                    <SelectCell value={card.subGroupId} options={subGroupOptions} onSave={v => saveCell(card.id, 'subGroup', v)} />
+                  ) : (
+                    <span className="table-cell-muted">{subGroup?.name || '-'}</span>
+                  )}
+                </td>
+
+                {/* Priority */}
+                <td onDoubleClick={() => startEdit(card.id, 'priority')}>
+                  {isEditing(card.id, 'priority') ? (
+                    <SelectCell value={card.priority} options={priorityOptions} onSave={v => saveCell(card.id, 'priority', v)} />
+                  ) : (
+                    card.priority ? <span className={`card-priority priority-${card.priority}`}>{card.priority}</span> : <span className="table-cell-muted">-</span>
+                  )}
+                </td>
+
+                {/* Due Date */}
+                <td onDoubleClick={() => startEdit(card.id, 'dueDate')}>
+                  {isEditing(card.id, 'dueDate') ? (
+                    <EditCell value={card.dueDate} type="date" onSave={v => saveCell(card.id, 'dueDate', v)} />
+                  ) : (
+                    dateInfo ? <span className={`card-date-badge date-${dateInfo.status}`}>{dateInfo.text}</span> : <span className="table-cell-muted">-</span>
+                  )}
+                </td>
+
+                {/* Label */}
+                <td onDoubleClick={() => startEdit(card.id, 'label')}>
+                  {isEditing(card.id, 'label') ? (
+                    <EditCell value={card.label} onSave={v => saveCell(card.id, 'label', v)} />
+                  ) : (
+                    card.label || <span className="table-cell-muted">-</span>
+                  )}
+                </td>
+
+                {/* Tasks (read-only, click opens modal) */}
+                <td className="table-cell-muted" onClick={() => onCardClick(card)}>
+                  {totalTasks > 0 ? `${doneTasks}/${totalTasks}` : '-'}
+                </td>
+
+                {/* Comments (read-only, click opens modal) */}
+                <td className="table-cell-muted" onClick={() => onCardClick(card)}>
+                  {card.comments.length > 0 ? card.comments.length : '-'}
+                </td>
+              </tr>
+            );
+          })}
+          {sorted.length === 0 && (
+            <tr><td colSpan={8} className="table-cell-muted" style={{ textAlign: 'center', padding: 24 }}>No cards yet</td></tr>
+          )}
         </tbody>
       </table>
     </div>
-  );
-});
-
-const TableRow = memo(function TableRow({
-  row,
-  onClick,
-}: {
-  row: Row;
-  onClick: (card: KanbanCard) => void;
-}) {
-  const { card, group, subGroup } = row;
-  const dateInfo = formatDueDate(card.dueDate);
-  const labelHex = getColorHex(card.labelColor);
-  const totalTasks = card.checklist.length;
-  const doneTasks = card.checklist.filter((i) => i.done).length;
-
-  return (
-    <tr onClick={() => onClick(card)}>
-      <td>{card.title}</td>
-      <td>{group.title}</td>
-      <td>{subGroup ? subGroup.name : '-'}</td>
-      <td>
-        {card.priority && (
-          <span className={`card-priority priority-${card.priority}`}>{card.priority}</span>
-        )}
-      </td>
-      <td>
-        {dateInfo && (
-          <span className={`card-date-badge date-${dateInfo.status}`}>{dateInfo.text}</span>
-        )}
-      </td>
-      <td>
-        {card.label && (
-          <span
-            className="card-label-dot"
-            style={labelHex ? { backgroundColor: labelHex } : undefined}
-          />
-        )}
-        {card.label}
-      </td>
-      <td>{totalTasks > 0 ? `${doneTasks}/${totalTasks}` : ''}</td>
-      <td>{card.comments.length > 0 ? card.comments.length : ''}</td>
-    </tr>
   );
 });

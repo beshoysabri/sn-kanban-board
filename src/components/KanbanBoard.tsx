@@ -34,7 +34,10 @@ export function KanbanBoard({ board, onChange }: Props) {
   }, []);
 
   // Lazy-load TableView
-  const [TableView, setTableView] = useState<React.ComponentType<{ board: BoardType; onCardClick: (card: KanbanCard) => void }> | null>(null);
+  const [TableView, setTableView] = useState<React.ComponentType<{
+    board: BoardType; onCardClick: (card: KanbanCard) => void;
+    onUpdateCard: (card: KanbanCard) => void; onMoveCard: (cardId: string, toGroupId: string) => void;
+  }> | null>(null);
   useEffect(() => {
     if (board.meta.viewMode === 'table' && !TableView) {
       import('./TableView').then(mod => setTableView(() => mod.TableView));
@@ -222,6 +225,24 @@ export function KanbanBoard({ board, onChange }: Props) {
     [updateBoard, showToast]
   );
 
+  const handleMoveCard = useCallback(
+    (cardId: string, toGroupId: string) => {
+      updateBoard((groups) => {
+        let movedCard: KanbanCard | null = null;
+        for (const group of groups) {
+          const idx = group.cards.findIndex(c => c.id === cardId);
+          if (idx !== -1) { [movedCard] = group.cards.splice(idx, 1); break; }
+        }
+        if (movedCard) {
+          const target = groups.find(g => g.id === toGroupId);
+          if (target) target.cards.push(movedCard);
+        }
+        return groups;
+      });
+    },
+    [updateBoard]
+  );
+
   const handleAddSubGroup = useCallback(() => {
     const name = prompt('Sub-group name:');
     if (!name?.trim()) return;
@@ -267,7 +288,7 @@ export function KanbanBoard({ board, onChange }: Props) {
   const renderView = () => {
     if (board.meta.viewMode === 'analytics') return <AnalyticsView board={board} />;
     if (board.meta.viewMode === 'table') {
-      if (TableView) return <TableView board={board} onCardClick={setEditingCard} />;
+      if (TableView) return <TableView board={board} onCardClick={setEditingCard} onUpdateCard={handleSaveCard} onMoveCard={handleMoveCard} />;
       return <div className="loading"><div className="loading-spinner" /></div>;
     }
     if (board.meta.viewMode === 'list') {

@@ -2544,6 +2544,39 @@ body.sn-embedded {
   font-size: 12px;
 }
 
+.table-edit-input {
+  width: 100%;
+  padding: 4px 6px;
+  border: 1px solid var(--kb-accent);
+  border-radius: var(--kb-radius-xs);
+  background: var(--kb-card-bg);
+  color: var(--kb-fg);
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+}
+
+.table-edit-select {
+  width: 100%;
+  padding: 4px 6px;
+  border: 1px solid var(--kb-accent);
+  border-radius: var(--kb-radius-xs);
+  background: var(--kb-card-bg);
+  color: var(--kb-fg);
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  cursor: pointer;
+}
+
+.kb-table td {
+  cursor: default;
+}
+
+.kb-table td[class*="table-cell-title"] {
+  cursor: pointer;
+}
+
 .wip-badge {
   font-size: 9px;
   font-weight: 500;
