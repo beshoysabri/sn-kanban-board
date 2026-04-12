@@ -1,6 +1,6 @@
 import { memo, useState, useRef, useEffect, useCallback } from 'react';
-// colors not needed for table view
 import { formatDueDate } from '../lib/dates';
+import { getFieldLabel } from '../lib/fields';
 import type { KanbanBoard, KanbanCard, StatusDef, GroupDef, Priority } from '../types/kanban';
 
 interface Props {
@@ -22,16 +22,19 @@ interface Row {
 
 const PRIORITY_ORDER: Record<Priority, number> = { critical: 4, high: 3, medium: 2, low: 1, '': 0 };
 
-const COLUMNS: { key: SortKey; label: string; editable: boolean }[] = [
-  { key: 'title', label: 'Title', editable: true },
-  { key: 'group', label: 'Status', editable: true },
-  { key: 'subGroup', label: 'Group', editable: true },
-  { key: 'priority', label: 'Priority', editable: true },
-  { key: 'dueDate', label: 'Due Date', editable: true },
-  { key: 'label', label: 'Label', editable: true },
-  { key: 'tasks', label: 'Tasks', editable: false },
-  { key: 'comments', label: 'Comments', editable: false },
-];
+function getColumns(board: KanbanBoard): { key: SortKey; label: string; editable: boolean }[] {
+  const fl = (id: string) => getFieldLabel(id, board.meta);
+  return [
+    { key: 'title', label: fl('title'), editable: true },
+    { key: 'group', label: fl('status'), editable: true },
+    { key: 'subGroup', label: fl('group'), editable: true },
+    { key: 'priority', label: fl('priority'), editable: true },
+    { key: 'dueDate', label: fl('dueDate'), editable: true },
+    { key: 'label', label: fl('label'), editable: true },
+    { key: 'tasks', label: fl('checklist'), editable: false },
+    { key: 'comments', label: fl('comments'), editable: false },
+  ];
+}
 
 function compareRows(a: Row, b: Row, sortKey: SortKey, sortDir: SortDir): number {
   let cmp = 0;
@@ -103,6 +106,7 @@ export const TableView = memo(function TableView({ board, onCardClick, onUpdateC
   const [sortDir, setSortDir] = useState<SortDir>('asc');
   const [editingCell, setEditingCell] = useState<{ cardId: string; column: SortKey } | null>(null);
   const clickTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const COLUMNS = getColumns(board);
 
   const statusMap = new Map(board.statuses.map(s => [s.id, s]));
   const groupMap = new Map(board.groups.map(g => [g.id, g]));

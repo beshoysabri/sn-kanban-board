@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { formatDueDate } from '../lib/dates';
 import { LABEL_COLORS, getColorHex } from '../lib/colors';
 import { Linkify } from './shared/Linkify';
+import { getFieldLabel } from '../lib/fields';
 import type { KanbanCard, KanbanBoard, Priority, ChecklistItem } from '../types/kanban';
 
 interface Props {
@@ -13,6 +14,7 @@ interface Props {
 }
 
 export function CardModal({ card, board, onSave, onDelete, onClose }: Props) {
+  const fl = (id: string) => getFieldLabel(id, board.meta);
   const [title, setTitle] = useState(card.title);
   const [description, setDescription] = useState(card.description);
   const [label, setLabel] = useState(card.label);
@@ -106,7 +108,7 @@ export function CardModal({ card, board, onSave, onDelete, onClose }: Props) {
 
         <div className="modal-body">
           <div className="modal-section">
-            <label className="modal-label">Description</label>
+            <label className="modal-label">{fl('description')}</label>
             <textarea
               className="modal-textarea"
               value={description}
@@ -117,7 +119,7 @@ export function CardModal({ card, board, onSave, onDelete, onClose }: Props) {
           </div>
 
           <div className="modal-section">
-            <label className="modal-label">Label</label>
+            <label className="modal-label">{fl('label')}</label>
             <input
               className="modal-input"
               value={label}
@@ -127,7 +129,7 @@ export function CardModal({ card, board, onSave, onDelete, onClose }: Props) {
           </div>
 
           <div className="modal-section">
-            <label className="modal-label">Color</label>
+            <label className="modal-label">{fl('labelColor')}</label>
             <div className="color-picker">
               <div className="color-preview" style={{ background: getColorHex(labelColor) || '#888' }} title={labelColor || 'No color'} />
               <button
@@ -166,7 +168,7 @@ export function CardModal({ card, board, onSave, onDelete, onClose }: Props) {
 
           {board.statuses.length > 0 && (
             <div className="modal-section">
-              <label className="modal-label">Status</label>
+              <label className="modal-label">{fl('status')}</label>
               <select className="modal-input form-select" value={statusId} onChange={e => setStatusId(e.target.value)}>
                 <option value="">None</option>
                 {board.statuses.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
@@ -176,7 +178,7 @@ export function CardModal({ card, board, onSave, onDelete, onClose }: Props) {
 
           {board.groups.length > 0 && (
             <div className="modal-section">
-              <label className="modal-label">Group</label>
+              <label className="modal-label">{fl('group')}</label>
               <select className="modal-input form-select" value={groupId} onChange={e => setGroupId(e.target.value)}>
                 <option value="">None</option>
                 {board.groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
@@ -186,7 +188,7 @@ export function CardModal({ card, board, onSave, onDelete, onClose }: Props) {
 
           {board.subGroups.length > 0 && (
             <div className="modal-section">
-              <label className="modal-label">Sub-Group</label>
+              <label className="modal-label">{fl('subGroup')}</label>
               <select className="modal-input form-select" value={subGroupId} onChange={e => setSubGroupId(e.target.value)}>
                 <option value="">None</option>
                 {board.subGroups.map(sg => <option key={sg.id} value={sg.id}>{sg.name}</option>)}
@@ -195,7 +197,7 @@ export function CardModal({ card, board, onSave, onDelete, onClose }: Props) {
           )}
 
           <div className="modal-section">
-            <label className="modal-label">Priority</label>
+            <label className="modal-label">{fl('priority')}</label>
             <div className="priority-picker">
               {(['', 'low', 'medium', 'high', 'critical'] as Priority[]).map(p => (
                 <button
@@ -211,7 +213,7 @@ export function CardModal({ card, board, onSave, onDelete, onClose }: Props) {
 
           <div className="modal-section">
             <label className="modal-label">
-              Checklist
+              {fl('checklist')}
               {checklist.length > 0 && (
                 <span className="comment-badge">
                   {checklist.filter(i => i.done).length}/{checklist.length}
@@ -287,7 +289,7 @@ export function CardModal({ card, board, onSave, onDelete, onClose }: Props) {
 
           <div className="modal-section">
             <label className="modal-label">
-              Due Date
+              {fl('dueDate')}
               {dateInfo && (
                 <span className={`date-badge-inline date-${dateInfo.status}`}>
                   {dateInfo.text}
@@ -336,7 +338,7 @@ export function CardModal({ card, board, onSave, onDelete, onClose }: Props) {
 
           <div className="modal-section">
             <label className="modal-label">
-              Comments
+              {fl('comments')}
               {comments.length > 0 && (
                 <span className="comment-badge">{comments.length}</span>
               )}

@@ -47,6 +47,15 @@ export function parseMarkdown(markdown: string): EditorState {
         }
         case 'groupby': meta.boardGroupBy = value.trim() || 'status'; break;
         case 'subgroupby': meta.boardSubGroupBy = value.trim(); break;
+        case 'fieldlabel': {
+          // Format: @fieldlabel: fieldId=Custom Name
+          const eqIdx = value.indexOf('=');
+          if (eqIdx > 0) {
+            if (!meta.fieldLabels) meta.fieldLabels = {};
+            meta.fieldLabels[value.slice(0, eqIdx).trim()] = value.slice(eqIdx + 1).trim();
+          }
+          break;
+        }
         case 'status': {
           const text = value.trim();
           let name = text, color = '', wipLimit = 0;
@@ -198,6 +207,11 @@ export function boardToMarkdown(board: KanbanBoard): string {
   parts.push(`@view: ${board.meta.viewMode}`);
   if (board.meta.boardGroupBy !== 'status') parts.push(`@groupby: ${board.meta.boardGroupBy}`);
   if (board.meta.boardSubGroupBy) parts.push(`@subgroupby: ${board.meta.boardSubGroupBy}`);
+  if (board.meta.fieldLabels) {
+    for (const [id, label] of Object.entries(board.meta.fieldLabels)) {
+      if (label) parts.push(`@fieldlabel: ${id}=${label}`);
+    }
+  }
 
   for (const s of board.statuses) {
     let tags = '';

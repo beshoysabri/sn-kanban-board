@@ -2500,26 +2500,100 @@ body.sn-embedded {
   border-color: var(--kb-accent);
 }
 
-.schema-color-input {
-  width: 28px;
-  height: 28px;
-  border: 2px solid var(--kb-border);
-  border-radius: 50%;
-  padding: 0;
-  cursor: pointer;
-  background: none;
+/* Palette color picker */
+.schema-palette-picker {
+  position: relative;
   flex-shrink: 0;
-  -webkit-appearance: none;
-  appearance: none;
 }
 
-.schema-color-input::-webkit-color-swatch-wrapper {
-  padding: 0;
-}
-
-.schema-color-input::-webkit-color-swatch {
-  border: none;
+.schema-palette-dot {
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
+  border: 2px solid var(--kb-border);
+  cursor: pointer;
+  padding: 0;
+  transition: border-color var(--kb-transition);
+}
+
+.schema-palette-dot:hover {
+  border-color: var(--kb-accent);
+}
+
+.schema-palette-popover {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 60;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 8px;
+  margin-top: 4px;
+  background: var(--kb-lane-bg);
+  border: 1px solid var(--kb-border);
+  border-radius: var(--kb-radius-sm);
+  box-shadow: var(--kb-shadow-md);
+  width: 190px;
+  animation: fadeIn 0.1s ease;
+}
+
+.schema-palette-swatch {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  padding: 0;
+  transition: transform var(--kb-transition);
+}
+
+.schema-palette-swatch:hover {
+  transform: scale(1.15);
+}
+
+.schema-palette-swatch.selected {
+  border-color: var(--kb-fg);
+  box-shadow: 0 0 0 2px var(--kb-lane-bg);
+}
+
+.schema-palette-swatch.no-color {
+  background: var(--kb-card-hover);
+  border: 2px dashed var(--kb-muted);
+  position: relative;
+}
+
+.schema-palette-swatch.no-color::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 55%;
+  height: 2px;
+  background: var(--kb-muted);
+  transform: translate(-50%, -50%) rotate(-45deg);
+}
+
+/* Built-in field labels */
+.schema-section-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--kb-muted);
+  padding: 4px 0;
+  margin-bottom: 4px;
+}
+
+.schema-field-id {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--kb-muted);
+  background: var(--kb-card-hover);
+  padding: 2px 8px;
+  border-radius: 4px;
+  white-space: nowrap;
+  min-width: 70px;
 }
 
 .schema-field-block {

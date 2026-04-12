@@ -36,6 +36,7 @@ export interface BoardMeta {
   viewMode: ViewMode;
   boardGroupBy: string;
   boardSubGroupBy: string;
+  fieldLabels?: Record<string, string>; // built-in field ID → custom display name
 }
 
 export interface KanbanCard {

@@ -51,6 +51,15 @@ export function getColorHex(name: string): string {
   return LEGACY_COLORS[lower] || '';
 }
 
+/** Find the palette color name for a given hex, or return the hex itself */
+export function getColorName(hexOrName: string): string {
+  if (!hexOrName) return '';
+  if (!hexOrName.startsWith('#')) return hexOrName; // already a name
+  const lower = hexOrName.toLowerCase();
+  const found = LABEL_COLORS.find(c => c.hex.toLowerCase() === lower);
+  return found ? found.name : hexOrName;
+}
+
 export function hexToRgba(hex: string, alpha: number): string {
   const clean = hex.replace('#', '');
   const r = parseInt(clean.substring(0, 2), 16);
