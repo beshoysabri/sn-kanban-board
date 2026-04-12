@@ -4,24 +4,39 @@ import { Modal } from './shared/Modal.tsx';
 import { LABEL_COLORS, getColorHex } from '../lib/colors.ts';
 import { BUILTIN_FIELDS } from '../lib/fields.ts';
 
-/** Debounced text input — keeps local state to avoid parent re-render on every keystroke */
-function DebouncedInput({ value, onChange, placeholder, style, className }: {
+/** Local-state text input — syncs to parent only on blur to avoid re-render on every keystroke */
+function LocalInput({ value, onChange, placeholder, style, className }: {
   value: string; onChange: (v: string) => void; placeholder?: string;
   style?: React.CSSProperties; className?: string;
 }) {
   const [local, setLocal] = useState(value);
-  const onChangeRef = useRef(onChange);
-  onChangeRef.current = onChange;
+  const latestLocal = useRef(local);
+  latestLocal.current = local;
 
-  // Sync from parent when value changes externally
-  useEffect(() => { setLocal(value); }, [value]);
+  // Only sync FROM parent if value changed externally (not from our own blur)
+  const lastSynced = useRef(value);
+  useEffect(() => {
+    if (value !== lastSynced.current) {
+      setLocal(value);
+      lastSynced.current = value;
+    }
+  }, [value]);
 
   return (
     <input className={className} style={style} value={local} placeholder={placeholder}
-      onChange={e => {
-        setLocal(e.target.value);
-        onChangeRef.current(e.target.value);
-      }} />
+      onChange={e => setLocal(e.target.value)}
+      onBlur={() => {
+        if (latestLocal.current !== value) {
+          lastSynced.current = latestLocal.current;
+          onChange(latestLocal.current);
+        }
+      }}
+      onKeyDown={e => {
+        if (e.key === 'Enter') {
+          (e.target as HTMLInputElement).blur();
+        }
+      }}
+    />
   );
 }
 import type { KanbanBoard, FieldType } from '../types/kanban';
@@ -195,7 +210,7 @@ export function SchemaEditor({ board, onUpdateBoard, onClose }: SchemaEditorProp
       {draft.statuses.map((s, i) => (
         <div className="schema-item" key={s.id}>
           <PaletteColorPicker value={s.color} onChange={hex => updateStatus(i, 'color', hex)} />
-          <DebouncedInput className="modal-input" style={{ flex: 1 }} value={s.name}
+          <LocalInput className="modal-input" style={{ flex: 1 }} value={s.name}
             onChange={v => updateStatus(i, 'name', v)} placeholder="Status name" />
           <input className="modal-input" style={{ width: 50 }} type="number" min={0}
             value={s.wipLimit} onChange={e => updateStatus(i, 'wipLimit', Number(e.target.value))} placeholder="WIP" title="WIP Limit" />
@@ -211,7 +226,7 @@ export function SchemaEditor({ board, onUpdateBoard, onClose }: SchemaEditorProp
       {draft[key].map((g, i) => (
         <div className="schema-item" key={g.id}>
           <PaletteColorPicker value={g.color} onChange={hex => updateGroupItem(key, i, 'color', hex)} />
-          <DebouncedInput className="modal-input" style={{ flex: 1 }} value={g.name}
+          <LocalInput className="modal-input" style={{ flex: 1 }} value={g.name}
             onChange={v => updateGroupItem(key, i, 'name', v)} placeholder={`${label} name`} />
           <button className="schema-delete-btn" onClick={() => deleteGroupItem(key, i)}><DeleteIcon /></button>
         </div>
@@ -227,7 +242,7 @@ export function SchemaEditor({ board, onUpdateBoard, onClose }: SchemaEditorProp
       {BUILTIN_FIELDS.map(bf => (
         <div className="schema-item" key={bf.id}>
           <span className="schema-field-id">{bf.id}</span>
-          <DebouncedInput className="modal-input" style={{ flex: 1 }}
+          <LocalInput className="modal-input" style={{ flex: 1 }}
             value={draft.meta.fieldLabels?.[bf.id] || bf.defaultName}
             onChange={v => updateFieldLabel(bf.id, v)}
             placeholder={bf.defaultName} />
@@ -239,7 +254,7 @@ export function SchemaEditor({ board, onUpdateBoard, onClose }: SchemaEditorProp
       {draft.fields.map((f, i) => (
         <div key={f.id} className="schema-field-block">
           <div className="schema-item">
-            <DebouncedInput className="modal-input" style={{ flex: 1 }} value={f.name}
+            <LocalInput className="modal-input" style={{ flex: 1 }} value={f.name}
               onChange={v => updateField(i, 'name', v)} placeholder="Field name" />
             <select className="modal-input form-select" value={f.type}
               onChange={e => updateField(i, 'type', e.target.value)}>
@@ -253,7 +268,7 @@ export function SchemaEditor({ board, onUpdateBoard, onClose }: SchemaEditorProp
                 <div key={oi} className="schema-option-row">
                   <PaletteColorPicker value={f.optionColors?.[opt] || ''}
                     onChange={hex => updateOptionColor(i, opt, hex)} />
-                  <DebouncedInput className="modal-input" style={{ flex: 1 }} value={opt}
+                  <LocalInput className="modal-input" style={{ flex: 1 }} value={opt}
                     onChange={v => {
                       setDraft(d => {
                         const fields = d.fields.map((field, fi) => {
