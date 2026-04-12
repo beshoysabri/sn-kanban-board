@@ -318,23 +318,66 @@ export function CardModal({ card, board, onSave, onDelete, onClose }: Props) {
             </div>
           </div>
 
-          {board.fields.length > 0 && board.fields.map(field => (
-            <div key={field.id} className="modal-section">
-              <label className="modal-label">{field.name}</label>
-              {field.type === 'select' ? (
-                <select className="modal-input form-select" value={customFields[field.id] || ''}
-                  onChange={e => setCustomFields({ ...customFields, [field.id]: e.target.value })}>
-                  <option value="">None</option>
-                  {field.options?.map(o => <option key={o} value={o}>{o}</option>)}
-                </select>
-              ) : (
-                <input className="modal-input" type={field.type === 'number' ? 'number' : field.type === 'date' ? 'date' : 'text'}
-                  value={customFields[field.id] || ''}
-                  onChange={e => setCustomFields({ ...customFields, [field.id]: e.target.value })}
-                  placeholder={`Enter ${field.name.toLowerCase()}...`} />
-              )}
-            </div>
-          ))}
+          {board.fields.length > 0 && board.fields.map(field => {
+            const cfVal = customFields[field.id] || '';
+            const setCf = (v: string) => setCustomFields({ ...customFields, [field.id]: v });
+            return (
+              <div key={field.id} className="modal-section">
+                <label className="modal-label">{field.name}</label>
+                {field.type === 'select' ? (
+                  <select className="modal-input form-select" value={cfVal} onChange={e => setCf(e.target.value)}>
+                    <option value="">None</option>
+                    {field.options?.map(o => <option key={o} value={o}>{o}</option>)}
+                  </select>
+                ) : field.type === 'multiselect' ? (
+                  <div className="multiselect-options">
+                    {field.options?.map(o => {
+                      const selected = cfVal.split(',').map(s => s.trim()).filter(Boolean);
+                      const isChecked = selected.includes(o);
+                      return (
+                        <label key={o} className="multiselect-option">
+                          <input type="checkbox" checked={isChecked}
+                            onChange={() => {
+                              const next = isChecked ? selected.filter(s => s !== o) : [...selected, o];
+                              setCf(next.join(','));
+                            }} />
+                          <span>{o}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                ) : field.type === 'textarea' ? (
+                  <textarea className="modal-textarea" value={cfVal} onChange={e => setCf(e.target.value)}
+                    placeholder={`Enter ${field.name.toLowerCase()}...`} rows={3} />
+                ) : field.type === 'url' ? (
+                  <div>
+                    <input className="modal-input" type="url" value={cfVal} onChange={e => setCf(e.target.value)}
+                      placeholder="https://..." />
+                    {cfVal && <a href={cfVal} target="_blank" rel="noopener noreferrer" className="kb-link" style={{ fontSize: 12, display: 'block', marginTop: 4 }}>{cfVal}</a>}
+                  </div>
+                ) : field.type === 'media' ? (
+                  <div>
+                    <textarea className="modal-textarea" value={cfVal} onChange={e => setCf(e.target.value)}
+                      placeholder="One URL per line..." rows={2} />
+                    {cfVal && cfVal.split('\n').filter(Boolean).map((url, ui) => (
+                      <a key={ui} href={url.trim()} target="_blank" rel="noopener noreferrer" className="kb-link"
+                        style={{ fontSize: 12, display: 'block', marginTop: 2 }}>{url.trim()}</a>
+                    ))}
+                  </div>
+                ) : field.type === 'checkbox' ? (
+                  <label className="checkbox-field">
+                    <input type="checkbox" checked={cfVal === 'true'}
+                      onChange={e => setCf(e.target.checked ? 'true' : '')} />
+                    <span>{cfVal === 'true' ? 'Yes' : 'No'}</span>
+                  </label>
+                ) : (
+                  <input className="modal-input" type={field.type === 'number' ? 'number' : field.type === 'date' ? 'date' : 'text'}
+                    value={cfVal} onChange={e => setCf(e.target.value)}
+                    placeholder={`Enter ${field.name.toLowerCase()}...`} />
+                )}
+              </div>
+            );
+          })}
 
           <div className="modal-section">
             <label className="modal-label">

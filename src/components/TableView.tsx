@@ -325,7 +325,7 @@ export const TableView = memo(function TableView({ board, onCardClick, onUpdateC
           return (
             <td key={cfKey} onDoubleClick={() => startEdit(card.id, cfKey)}>
               {isEditing(card.id, cfKey) ? (
-                f.type === 'select' ? (
+                (f.type === 'select' || f.type === 'multiselect') ? (
                   <SelectCell value={cfVal} options={[{ value: '', label: '-' }, ...(f.options || []).map(o => ({ value: o, label: o }))]}
                     onSave={v => saveCell(card.id, cfKey, v)} />
                 ) : (
@@ -333,7 +333,17 @@ export const TableView = memo(function TableView({ board, onCardClick, onUpdateC
                     onSave={v => saveCell(card.id, cfKey, v)} />
                 )
               ) : (
-                <span className="table-cell-muted">{cfVal || '-'}</span>
+                f.type === 'url' && cfVal ? (
+                  <a href={cfVal} target="_blank" rel="noopener noreferrer" className="kb-link" onClick={e => e.stopPropagation()}>{cfVal.length > 30 ? cfVal.slice(0, 27) + '...' : cfVal}</a>
+                ) : f.type === 'media' && cfVal ? (
+                  <span className="table-cell-muted">{cfVal.split('\n').filter(Boolean).length} link(s)</span>
+                ) : f.type === 'checkbox' ? (
+                  <span>{cfVal === 'true' ? '✓' : '-'}</span>
+                ) : f.type === 'multiselect' && cfVal ? (
+                  <span className="table-cell-muted">{cfVal}</span>
+                ) : (
+                  <span className="table-cell-muted">{cfVal || '-'}</span>
+                )
               )}
             </td>
           );

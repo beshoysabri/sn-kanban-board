@@ -57,7 +57,17 @@ const TABS: { key: Tab; label: string }[] = [
   { key: 'layout', label: 'Layout' },
 ];
 
-const FIELD_TYPES: FieldType[] = ['text', 'select', 'date', 'number'];
+const FIELD_TYPES: { value: FieldType; label: string }[] = [
+  { value: 'text', label: 'Text' },
+  { value: 'textarea', label: 'Long Text' },
+  { value: 'number', label: 'Number' },
+  { value: 'date', label: 'Date' },
+  { value: 'select', label: 'Select' },
+  { value: 'multiselect', label: 'Multi-Select' },
+  { value: 'url', label: 'URL' },
+  { value: 'media', label: 'Media (URLs)' },
+  { value: 'checkbox', label: 'Checkbox' },
+];
 
 const DeleteIcon = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -258,11 +268,11 @@ export function SchemaEditor({ board, onUpdateBoard, onClose }: SchemaEditorProp
           <div className="schema-item">
             <select className="modal-input form-select" style={{ flex: 1 }} value={f.type}
               onChange={e => updateField(i, 'type', e.target.value)}>
-              {FIELD_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+              {FIELD_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
             </select>
             <button className="schema-delete-btn" onClick={() => deleteField(i)}><DeleteIcon /></button>
           </div>
-          {f.type === 'select' && (
+          {(f.type === 'select' || f.type === 'multiselect') && (
             <div className="schema-select-options">
               {(f.options ?? []).map((opt, oi) => (
                 <div key={oi} className="schema-option-row">

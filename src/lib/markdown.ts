@@ -200,7 +200,11 @@ function parseCardProperty(
     if (propMatch) {
       const [, propName, propValue] = propMatch;
       const field = fields.find(f => f.name.toLowerCase() === propName.trim().toLowerCase());
-      if (field) card.customFields[field.id] = propValue.trim();
+      if (field) {
+        // Decode | back to newlines for media/textarea fields
+        const decoded = (field.type === 'media' || field.type === 'textarea') ? propValue.trim().replace(/\|/g, '\n') : propValue.trim();
+        card.customFields[field.id] = decoded;
+      }
     }
   }
 }
@@ -266,7 +270,11 @@ export function boardToMarkdown(board: KanbanBoard): string {
     for (const [fieldId, value] of Object.entries(card.customFields)) {
       if (!value) continue;
       const field = board.fields.find(f => f.id === fieldId);
-      if (field) parts.push(`  * ${field.name}: ${value}`);
+      if (field) {
+        // Encode newlines as | for media/textarea fields
+        const encoded = value.includes('\n') ? value.replace(/\n/g, '|') : value;
+        parts.push(`  * ${field.name}: ${encoded}`);
+      }
     }
     if (card.checklist.length > 0) {
       parts.push(`  * Checklist:`);

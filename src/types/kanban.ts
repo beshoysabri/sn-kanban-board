@@ -2,7 +2,7 @@ export type ViewMode = 'list' | 'board' | 'table' | 'analytics';
 
 export type Priority = 'low' | 'medium' | 'high' | 'critical' | '';
 
-export type FieldType = 'text' | 'select' | 'date' | 'number';
+export type FieldType = 'text' | 'select' | 'multiselect' | 'date' | 'number' | 'url' | 'media' | 'textarea' | 'checkbox';
 
 export interface ChecklistItem {
   text: string;
