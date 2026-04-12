@@ -45,8 +45,20 @@ export const KanbanCardComponent = memo(function KanbanCardComponent({ card, ind
               <div className="card-description"><Linkify>{card.description}</Linkify></div>
             )}
 
-            {(dateInfo || (card.comments && card.comments.length > 0)) && (
+            {card.checklist && card.checklist.length > 0 && (
+              <div className="card-checklist-progress">
+                <div className="checklist-progress-bar small">
+                  <div className="checklist-progress-fill" style={{ width: `${(card.checklist.filter(i => i.done).length / card.checklist.length) * 100}%` }} />
+                </div>
+                <span className="card-checklist-count">{card.checklist.filter(i => i.done).length}/{card.checklist.length}</span>
+              </div>
+            )}
+
+            {(dateInfo || card.priority || (card.comments && card.comments.length > 0)) && (
               <div className="card-meta">
+                {card.priority && (
+                  <span className={`card-priority priority-${card.priority}`}>{card.priority}</span>
+                )}
                 {dateInfo && (
                   <span className={`card-date-badge date-${dateInfo.status}`}>
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

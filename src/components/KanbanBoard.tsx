@@ -6,6 +6,7 @@ import { CardModal } from './CardModal';
 import { BoardHeader } from './BoardHeader';
 import { BoardSidebar } from './BoardSidebar';
 import { ListView } from './ListView';
+import { AnalyticsView } from './AnalyticsView';
 import { ShortcutsHelp } from './shared/ShortcutsHelp';
 import { createNewCard, createNewLane, createDefaultBoard } from '../lib/markdown';
 import type { KanbanBoard as BoardType, KanbanCard, KanbanLane, BoardMeta } from '../types/kanban';
@@ -23,6 +24,7 @@ export function KanbanBoard({ board, onChange }: Props) {
   const [selectedLaneId, setSelectedLaneId] = useState<string | null>(null);
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
   const boardRef = useRef(board);
   boardRef.current = board;
 
@@ -179,6 +181,7 @@ export function KanbanBoard({ board, onChange }: Props) {
           title: `${original.title} (copy)`,
           color: original.color,
           cards: original.cards.map((c) => ({ ...c, id: uuid() })),
+          wipLimit: original.wipLimit,
         };
         lanes.splice(idx + 1, 0, duplicate);
         return lanes;
@@ -204,6 +207,17 @@ export function KanbanBoard({ board, onChange }: Props) {
       updateBoard((lanes) => {
         const lane = lanes.find((l) => l.id === laneId);
         if (lane) lane.color = color;
+        return lanes;
+      });
+    },
+    [updateBoard]
+  );
+
+  const handleSetWipLimit = useCallback(
+    (laneId: string, limit: number) => {
+      updateBoard((lanes) => {
+        const lane = lanes.find((l) => l.id === laneId);
+        if (lane) lane.wipLimit = limit;
         return lanes;
       });
     },
@@ -241,6 +255,14 @@ export function KanbanBoard({ board, onChange }: Props) {
       showToast('Card deleted');
     },
     [updateBoard, showToast]
+  );
+
+  const handleReorderLanes = useCallback(
+    (newLanes: KanbanLane[]) => {
+      const cur = boardRef.current;
+      onChange({ ...cur, lanes: newLanes });
+    },
+    [onChange]
   );
 
   const handleAddLane = () => {
@@ -294,6 +316,7 @@ export function KanbanBoard({ board, onChange }: Props) {
         onSelectLane={setSelectedLaneId}
         onAddCard={handleQuickAddCard}
         onAddLane={handleQuickAddLane}
+        onReorderLanes={handleReorderLanes}
         sidebarOpen={sidebarOpen}
         onCloseSidebar={() => setSidebarOpen(false)}
       />
@@ -305,9 +328,13 @@ export function KanbanBoard({ board, onChange }: Props) {
           onToggleSidebar={() => setSidebarOpen(v => !v)}
           onShowShortcuts={() => setShowShortcuts(true)}
           onAddCard={handleQuickAddCard}
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
         />
 
-        {board.meta.viewMode === 'list' ? (
+        {board.meta.viewMode === 'analytics' ? (
+          <AnalyticsView board={board} />
+        ) : board.meta.viewMode === 'list' ? (
           <ListView
             lanes={board.lanes}
             onCardClick={setEditingCard}
@@ -346,6 +373,7 @@ export function KanbanBoard({ board, onChange }: Props) {
                             onDuplicateLane={handleDuplicateLane}
                             onRenameLane={handleRenameLane}
                             onSetLaneColor={handleSetLaneColor}
+                            onSetWipLimit={handleSetWipLimit}
                           />
                         </div>
                       )}

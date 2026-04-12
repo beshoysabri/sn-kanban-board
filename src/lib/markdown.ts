@@ -1,25 +1,12 @@
 import { v4 as uuid } from 'uuid';
-import type { KanbanBoard, KanbanCard, KanbanLane, BoardMeta, EditorState } from '../types/kanban';
+import type { KanbanBoard, KanbanCard, KanbanLane, BoardMeta, ViewMode, Priority, EditorState } from '../types/kanban';
 
 const DEFAULT_META: BoardMeta = { title: '', description: '', viewMode: 'list' };
 
+const VALID_VIEWS: ViewMode[] = ['list', 'board', 'analytics'];
+
 /**
  * Parse markdown into a kanban board state.
- * Format (backward-compatible with original sn-kanban-editor):
- *
- * @title: Board Title
- * @description: Board description
- * @view: list
- *
- * # Lane Title [color:blue]
- * * Card Title
- *   * Description: card description
- *   * Label: label text
- *   * LabelColor: blue
- *   * DueDate: 2026-03-01
- *   * Comments:
- *     * comment 1
- *     * comment 2
  */
 export function parseMarkdown(markdown: string): EditorState {
   const lanes: KanbanLane[] = [];
@@ -30,6 +17,7 @@ export function parseMarkdown(markdown: string): EditorState {
   let currentLane: KanbanLane | null = null;
   let currentCard: KanbanCard | null = null;
   let inComments = false;
+  let inChecklist = false;
 
   for (const line of lines) {
     if (!line.trim()) continue;
@@ -46,9 +34,11 @@ export function parseMarkdown(markdown: string): EditorState {
           case 'description':
             meta.description = value.trim();
             break;
-          case 'view':
-            meta.viewMode = value.trim() === 'board' ? 'board' : 'list';
+          case 'view': {
+            const v = value.trim() as ViewMode;
+            meta.viewMode = VALID_VIEWS.includes(v) ? v : 'list';
             break;
+          }
         }
       }
       continue;
@@ -56,32 +46,32 @@ export function parseMarkdown(markdown: string): EditorState {
 
     if (line.startsWith('# ')) {
       const laneText = line.slice(2).trim();
-      const colorMatch = laneText.match(/^(.*?)\s*\[color:([^\]]+)\]\s*$/);
+      // Parse [color:xxx] and [wip:N] tags
+      let title = laneText;
+      let color = '';
+      let wipLimit = 0;
+      title = title.replace(/\[color:([^\]]+)\]/g, (_, c) => { color = c; return ''; });
+      title = title.replace(/\[wip:(\d+)\]/g, (_, n) => { wipLimit = parseInt(n, 10); return ''; });
       currentLane = {
         id: uuid(),
-        title: colorMatch ? colorMatch[1].trim() : laneText,
-        color: colorMatch ? colorMatch[2] : '',
+        title: title.trim(),
+        color,
         cards: [],
+        wipLimit,
       };
       lanes.push(currentLane);
       currentCard = null;
       inComments = false;
+      inChecklist = false;
     } else if (line.startsWith('* ')) {
       if (!currentLane) {
         parsingErrors.push(`Card before lane: ${line}`);
         continue;
       }
-      currentCard = {
-        id: uuid(),
-        title: line.slice(2).trim(),
-        description: '',
-        label: '',
-        labelColor: '',
-        dueDate: '',
-        comments: [],
-      };
+      currentCard = createNewCard(line.slice(2).trim());
       currentLane.cards.push(currentCard);
       inComments = false;
+      inChecklist = false;
     } else if (line.toLowerCase().trimStart().startsWith('* links: ')) {
       // Legacy: silently ignore linked notes lines
     } else if (line.toLowerCase().trimStart().startsWith('* description: ')) {
@@ -100,8 +90,30 @@ export function parseMarkdown(markdown: string): EditorState {
       if (currentCard) {
         currentCard.dueDate = line.slice(line.toLowerCase().indexOf('duedate: ') + 9).trim();
       }
+    } else if (line.toLowerCase().trimStart().startsWith('* priority: ')) {
+      if (currentCard) {
+        const p = line.slice(line.toLowerCase().indexOf('priority: ') + 10).trim().toLowerCase();
+        if (['low', 'medium', 'high', 'critical'].includes(p)) {
+          currentCard.priority = p as Priority;
+        }
+      }
     } else if (line.toLowerCase().trimStart().startsWith('* comments:')) {
       inComments = true;
+      inChecklist = false;
+    } else if (line.toLowerCase().trimStart().startsWith('* checklist:')) {
+      inChecklist = true;
+      inComments = false;
+    } else if (inChecklist && line.trimStart().startsWith('* ')) {
+      if (currentCard) {
+        const text = line.trimStart().slice(2);
+        if (text.startsWith('[x] ')) {
+          currentCard.checklist.push({ text: text.slice(4), done: true });
+        } else if (text.startsWith('[ ] ')) {
+          currentCard.checklist.push({ text: text.slice(4), done: false });
+        } else {
+          currentCard.checklist.push({ text, done: false });
+        }
+      }
     } else if (inComments && line.trimStart().startsWith('* ')) {
       if (currentCard) {
         currentCard.comments.push(line.trimStart().slice(2));
@@ -120,7 +132,6 @@ export function parseMarkdown(markdown: string): EditorState {
 export function boardToMarkdown(board: KanbanBoard): string {
   const parts: string[] = [];
 
-  // Emit metadata
   if (board.meta.title) {
     parts.push(`@title: ${board.meta.title}`);
   }
@@ -131,8 +142,10 @@ export function boardToMarkdown(board: KanbanBoard): string {
   parts.push('');
 
   for (const lane of board.lanes) {
-    const colorTag = lane.color ? ` [color:${lane.color}]` : '';
-    parts.push(`# ${lane.title}${colorTag}`);
+    let tags = '';
+    if (lane.color) tags += ` [color:${lane.color}]`;
+    if (lane.wipLimit > 0) tags += ` [wip:${lane.wipLimit}]`;
+    parts.push(`# ${lane.title}${tags}`);
     for (const card of lane.cards) {
       parts.push(`* ${card.title}`);
       if (card.description) {
@@ -146,6 +159,15 @@ export function boardToMarkdown(board: KanbanBoard): string {
       }
       if (card.dueDate) {
         parts.push(`  * DueDate: ${card.dueDate}`);
+      }
+      if (card.priority) {
+        parts.push(`  * Priority: ${card.priority}`);
+      }
+      if (card.checklist && card.checklist.length > 0) {
+        parts.push(`  * Checklist:`);
+        for (const item of card.checklist) {
+          parts.push(`    * ${item.done ? '[x]' : '[ ]'} ${item.text}`);
+        }
       }
       if (card.comments && card.comments.length > 0) {
         parts.push(`  * Comments:`);
@@ -168,9 +190,9 @@ export function createDefaultBoard(): KanbanBoard {
   return {
     meta: { ...DEFAULT_META },
     lanes: [
-      { id: uuid(), title: 'To Do', color: '', cards: [] },
-      { id: uuid(), title: 'In Progress', color: 'Ocean', cards: [] },
-      { id: uuid(), title: 'Done', color: 'Sage', cards: [] },
+      { id: uuid(), title: 'To Do', color: '', cards: [], wipLimit: 0 },
+      { id: uuid(), title: 'In Progress', color: 'Ocean', cards: [], wipLimit: 0 },
+      { id: uuid(), title: 'Done', color: 'Sage', cards: [], wipLimit: 0 },
     ],
   };
 }
@@ -184,6 +206,8 @@ export function createNewCard(title: string = ''): KanbanCard {
     labelColor: '',
     dueDate: '',
     comments: [],
+    priority: '',
+    checklist: [],
   };
 }
 
@@ -193,5 +217,6 @@ export function createNewLane(title: string = 'New Lane'): KanbanLane {
     title,
     color: '',
     cards: [],
+    wipLimit: 0,
   };
 }

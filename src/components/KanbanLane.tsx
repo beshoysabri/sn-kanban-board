@@ -12,6 +12,7 @@ interface Props {
   onDuplicateLane: (laneId: string) => void;
   onRenameLane: (laneId: string, title: string) => void;
   onSetLaneColor: (laneId: string, color: string) => void;
+  onSetWipLimit: (laneId: string, limit: number) => void;
 }
 
 export const KanbanLaneComponent = memo(function KanbanLaneComponent({
@@ -22,6 +23,7 @@ export const KanbanLaneComponent = memo(function KanbanLaneComponent({
   onDuplicateLane,
   onRenameLane,
   onSetLaneColor,
+  onSetWipLimit,
 }: Props) {
   const [isEditing, setIsEditing] = useState(false);
   const [title, setTitle] = useState(lane.title);
@@ -87,7 +89,7 @@ export const KanbanLaneComponent = memo(function KanbanLaneComponent({
 
   return (
     <div
-      className={`kanban-lane ${laneColor ? 'lane-tinted' : ''}`}
+      className={`kanban-lane ${laneColor ? 'lane-tinted' : ''} ${lane.wipLimit > 0 && lane.cards.length > lane.wipLimit ? 'wip-exceeded' : ''}`}
       style={laneColor ? { '--lane-accent': laneColor } as React.CSSProperties : undefined}
     >
       <div
@@ -209,6 +211,19 @@ export const KanbanLaneComponent = memo(function KanbanLaneComponent({
                   </label>
                 </div>
               )}
+              <button onClick={() => {
+                const input = prompt('WIP limit (0 = unlimited):', String(lane.wipLimit || 0));
+                if (input !== null) {
+                  const limit = parseInt(input, 10);
+                  if (!isNaN(limit) && limit >= 0) {
+                    onSetWipLimit(lane.id, limit);
+                  }
+                }
+                setShowMenu(false);
+              }}>
+                WIP Limit
+                {lane.wipLimit > 0 && <span style={{ fontSize: 11, opacity: 0.6 }}>{lane.wipLimit}</span>}
+              </button>
               <div className="lane-menu-divider" />
               <button
                 className="danger"

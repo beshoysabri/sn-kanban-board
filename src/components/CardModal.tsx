@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { formatDueDate } from '../lib/dates';
 import { LABEL_COLORS, getColorHex } from '../lib/colors';
 import { Linkify } from './shared/Linkify';
-import type { KanbanCard } from '../types/kanban';
+import type { KanbanCard, Priority, ChecklistItem } from '../types/kanban';
 
 interface Props {
   card: KanbanCard;
@@ -18,6 +18,9 @@ export function CardModal({ card, onSave, onDelete, onClose }: Props) {
   const [labelColor, setLabelColor] = useState(card.labelColor);
   const [dueDate, setDueDate] = useState(card.dueDate);
   const [comments, setComments] = useState<string[]>([...card.comments]);
+  const [priority, setPriority] = useState<Priority>(card.priority || '');
+  const [checklist, setChecklist] = useState<ChecklistItem[]>([...(card.checklist || [])]);
+  const [newCheckItem, setNewCheckItem] = useState('');
   const [newComment, setNewComment] = useState('');
   const [confirmDelete, setConfirmDelete] = useState(false);
   const overlayRef = useRef<HTMLDivElement>(null);
@@ -33,6 +36,8 @@ export function CardModal({ card, onSave, onDelete, onClose }: Props) {
       labelColor,
       dueDate,
       comments,
+      priority,
+      checklist,
     });
     onClose();
   };
@@ -147,6 +152,97 @@ export function CardModal({ card, onSave, onDelete, onClose }: Props) {
                   </svg>
                 )}
               </label>
+            </div>
+          </div>
+
+          <div className="modal-section">
+            <label className="modal-label">Priority</label>
+            <div className="priority-picker">
+              {(['', 'low', 'medium', 'high', 'critical'] as Priority[]).map(p => (
+                <button
+                  key={p || 'none'}
+                  className={`priority-badge priority-${p || 'none'} ${priority === p ? 'selected' : ''}`}
+                  onClick={() => setPriority(p)}
+                >
+                  {p ? p.charAt(0).toUpperCase() + p.slice(1) : 'None'}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="modal-section">
+            <label className="modal-label">
+              Checklist
+              {checklist.length > 0 && (
+                <span className="comment-badge">
+                  {checklist.filter(i => i.done).length}/{checklist.length}
+                </span>
+              )}
+            </label>
+            {checklist.length > 0 && (
+              <div className="checklist-progress-bar">
+                <div
+                  className="checklist-progress-fill"
+                  style={{ width: `${checklist.length > 0 ? (checklist.filter(i => i.done).length / checklist.length) * 100 : 0}%` }}
+                />
+              </div>
+            )}
+            <div className="checklist-items">
+              {checklist.map((item, i) => (
+                <div key={i} className="checklist-item">
+                  <input
+                    type="checkbox"
+                    checked={item.done}
+                    onChange={() => {
+                      const updated = [...checklist];
+                      updated[i] = { ...updated[i], done: !updated[i].done };
+                      setChecklist(updated);
+                    }}
+                    className="checklist-checkbox"
+                  />
+                  <span className={`checklist-text ${item.done ? 'done' : ''}`}>{item.text}</span>
+                  <button
+                    className="comment-delete-btn"
+                    onClick={() => setChecklist(checklist.filter((_, j) => j !== i))}
+                    aria-label="Remove item"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                      <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                  </button>
+                </div>
+              ))}
+            </div>
+            <div className="add-comment-row">
+              <input
+                className="modal-input comment-input"
+                value={newCheckItem}
+                onChange={(e) => setNewCheckItem(e.target.value)}
+                placeholder="Add a task..."
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    const trimmed = newCheckItem.trim();
+                    if (trimmed) {
+                      setChecklist([...checklist, { text: trimmed, done: false }]);
+                      setNewCheckItem('');
+                    }
+                  }
+                }}
+              />
+              <button
+                className="add-comment-btn"
+                onClick={() => {
+                  const trimmed = newCheckItem.trim();
+                  if (trimmed) {
+                    setChecklist([...checklist, { text: trimmed, done: false }]);
+                    setNewCheckItem('');
+                  }
+                }}
+                disabled={!newCheckItem.trim()}
+              >
+                Add
+              </button>
             </div>
           </div>
 
