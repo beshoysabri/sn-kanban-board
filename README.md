@@ -1,58 +1,143 @@
 # Kanban Board for Standard Notes
 
-A modern, fully-featured Kanban board editor plugin for [Standard Notes](https://standardnotes.com). Organize your notes as Kanban boards with drag-and-drop, color labels, due dates, comments, and full theme support.
+A powerful, fully-featured Kanban board editor plugin for [Standard Notes](https://standardnotes.com). Organize your notes as interactive boards with drag-and-drop cards, multiple views, custom fields, analytics, and full theme support.
 
-**Live:** [beshoysabri.github.io/sn-kanban-board](https://beshoysabri.github.io/sn-kanban-board/)
+**Install URL:**
+```
+https://beshoysabri.github.io/sn-kanban-board/ext.json
+```
 
 ---
 
 ## Features
 
-### Board & List Views
-- **Kanban Board** — horizontal scrollable lanes with drag-and-drop cards between columns
-- **List View** — grouped, collapsible card list with drag-and-drop between groups
-- Toggle between views instantly; your preference is saved per note
+### Four Interactive Views
+
+| View | Description |
+|------|-------------|
+| **Board** | Classic Kanban columns with drag-and-drop cards. Supports 2D grid layout with swim lanes. |
+| **List** | Grouped, collapsible card list with inline metadata (labels, priorities, due dates). |
+| **Table** | Spreadsheet-style view with sortable columns, inline cell editing, and custom field columns. |
+| **Analytics** | Interactive dashboard with 10 panels covering status flow, priority matrix, group performance, and more. |
 
 ### Cards
-- Title, description, and label with custom color (8 presets + hex color picker)
-- Due dates with smart formatting — "Overdue", "Today", "Tomorrow", "In 3d", etc.
-- Color-coded urgency badges (red/yellow/orange/blue/gray)
-- Comments system — add and delete comments per card
+
+- Title, description, label with 18-color muted palette
+- Priority levels: Low, Medium, High, Critical
+- Due dates with smart formatting (Overdue, Today, Tomorrow, In 3d, Jun 1)
+- Checklists with progress tracking
+- Comments system
 - Notion-style tinted cards based on label color
+- URL auto-linking in descriptions and comments
 
-### Lanes / Groups
-- Add, rename, delete, and duplicate lanes
-- Lane accent colors
-- Drag-and-drop to reorder lanes (board view)
-- Card count per lane
+### Custom Fields
 
-### Board
-- Editable board title and description
-- Board statistics (columns and card count)
-- Empty state with quick-start options ("Create Default Board" or "Start Empty")
+Define unlimited custom fields through the Schema Editor:
+
+| Type | Description |
+|------|-------------|
+| Text | Single-line text input |
+| Long Text | Multi-line textarea |
+| Number | Numeric input |
+| Date | Date picker |
+| Select | Single-value dropdown with colored options |
+| Multi-Select | Checkbox list from predefined options |
+| URL | Clickable link input with preview |
+| Media | Multiple URLs (one per line), all clickable |
+| Checkbox | Boolean yes/no toggle |
+
+Custom fields appear in the card modal, table view (with inline editing), CSV export, and analytics.
+
+### Statuses, Groups, and Sub-Groups
+
+Three independent organizational dimensions:
+
+- **Statuses** define workflow stages (To Do, In Progress, Done) with optional WIP limits
+- **Groups** categorize cards by team, project, or department
+- **Sub-Groups** add a secondary classification (sprint, quarter, phase)
+
+Each dimension supports custom colors, renaming, reordering, and deletion with automatic card reassignment.
+
+### Board Layout
+
+Configure how cards are arranged independently per view:
+
+- **Group By** (columns): Status or Group
+- **Swim Lanes** (rows): Group, Sub-Group, or Status
+- Each view (Board, List, Table) has its own independent grouping settings
+- 2D grid layout when swim lanes are active
+
+### Schema Editor
+
+Access from the gear icon in the header. Manage:
+
+- Statuses with colors and WIP limits
+- Groups and Sub-Groups with colors
+- Custom field definitions (add, rename, delete, change type)
+- Per-field color palette for select options
+- Built-in field label renaming (customize "Status" to "Phase", "Priority" to "Urgency", etc.)
+- Per-view layout settings (group-by and swim-lane configuration)
+
+### Analytics Dashboard
+
+Ten interactive panels providing actionable insights:
+
+1. **Summary Cards** — Total cards, completion rate, overdue count, tasks done, avg priority, activity
+2. **Status Flow** — Stacked bar showing card distribution with WIP violation badges
+3. **Group Performance** — Per-group card counts with checklist completion rates
+4. **Priority x Status Matrix** — 2D grid showing card counts at each intersection
+5. **Due Date Timeline** — Overdue, today, this week, this month, later, no date breakdown
+6. **Sub-Group Breakdown** — Per-sub-group counts with completion tracking
+7. **Checklist Insights** — Cards ready to advance, per-status completion rates
+8. **Custom Field Analytics** — Distribution charts for select/multiselect fields
+9. **At Risk** — Overdue and high-priority cards sorted by urgency (clickable)
+10. **Labels** — Top label frequency chart
+
+### Search, Filter, and Sort
+
+All accessible from the header toolbar on every view:
+
+- **Search** — Filter cards by title, description, or label
+- **Filter by Status** — Show only cards in a specific status
+- **Filter by Priority** — Show only cards of a specific priority level
+- **Sort** — By title, priority, due date, or label with ascending/descending toggle
+- Active filters are visually highlighted in the header
+
+### Export
+
+- **CSV** — All fields including custom fields, status, group, sub-group
+- **Markdown** — Re-importable format using the board's native markdown schema
+- **JSON** — Complete board structure for backup or integration
+
+### Keyboard Shortcuts
+
+| Key | Action |
+|-----|--------|
+| `N` | New card in first column |
+| `L` | New status |
+| `V` | Cycle through views |
+| `?` | Toggle shortcuts help |
+| `Esc` | Close modal |
 
 ### Standard Notes Integration
+
 - Full theme support — automatically adapts to any SN theme (light or dark)
-- Data persists as markdown inside your SN note
-- Works on **desktop**, **web**, and **mobile** SN clients
+- Data persists as human-readable markdown inside your SN note
+- Works on desktop, web, and mobile SN clients
 - Offline fallback via localStorage when running standalone
 - Debug panel (`Ctrl+Shift+D`) for troubleshooting SN communication
 
----
+### Mobile Support
 
-## Screenshots
-
-| Board View | List View |
-|:---:|:---:|
-| Drag-and-drop kanban columns | Grouped collapsible list with drag-and-drop |
-
-| Card Editor | Theme Support |
-|:---:|:---:|
-| Full card modal with all fields | Adapts to any SN theme automatically |
+- Responsive layout for iPhone and Android
+- Sidebar becomes a drawer with overlay on small screens
+- Touch-friendly targets (44px minimum)
+- Bottom-sheet card modal
+- Horizontally scrollable board and table views
 
 ---
 
-## Installation in Standard Notes
+## Installation
 
 ### From URL (Recommended)
 
@@ -67,10 +152,22 @@ A modern, fully-featured Kanban board editor plugin for [Standard Notes](https:/
 
 ### From Source
 
-1. Clone and build (see [Development](#development) below)
+1. Clone and build (see Development below)
 2. Deploy the `dist/` folder to any static host
 3. Update `public/ext.json` with your hosted URL
 4. Install using your custom `ext.json` URL
+
+---
+
+## Tech Stack
+
+| Technology | Purpose |
+|---|---|
+| [React](https://react.dev/) 19 | UI framework |
+| [TypeScript](https://www.typescriptlang.org/) 5.9 | Type safety |
+| [Vite](https://vite.dev/) 7 | Build tool and dev server |
+| [@hello-pangea/dnd](https://github.com/hello-pangea/dnd) | Drag-and-drop |
+| [uuid](https://github.com/uuidjs/uuid) | ID generation |
 
 ---
 
@@ -100,43 +197,50 @@ npm install
 
 ### Local Development with Standard Notes
 
-1. Run `npm run dev` — Vite starts at `http://localhost:5173`
-2. In Standard Notes, install a custom plugin with a local `ext.json`:
-   ```json
-   {
-     "identifier": "com.yourname.kanban-dev",
-     "name": "Kanban (Dev)",
-     "content_type": "SN|Component",
-     "area": "editor-editor",
-     "version": "1.0.0",
-     "url": "http://localhost:5173/index.html"
-   }
+1. Run `npm run dev` (starts at `http://localhost:5173`)
+2. In Standard Notes, install a custom plugin with the dev `ext.json`:
+   ```
+   http://localhost:5173/ext.json
    ```
 3. Changes hot-reload instantly in the SN editor pane
-
-> **Tip:** Use a different `identifier` for dev vs production so both can be installed simultaneously.
 
 ---
 
 ## Deployment
 
-### GitHub Pages (Automated)
+The repo includes a GitHub Actions workflow that automatically builds and deploys to GitHub Pages on every push to `main`.
 
-The repo includes a GitHub Actions workflow (`.github/workflows/deploy.yml`) that automatically builds and deploys to GitHub Pages on every push to `main`.
+1. Go to repo **Settings** > **Pages** > set Source to **GitHub Actions**
+2. Push to `main` — deploys automatically
 
-**Setup:**
-1. Go to your repo **Settings** > **Pages**
-2. Set **Source** to **GitHub Actions**
-3. Push to `main` — the site deploys automatically
+---
 
-### Manual Deployment
+## Data Format
 
-```bash
-npm run build
-# Upload the contents of dist/ to any static host
+Board data is stored as markdown inside the SN note, making it human-readable:
+
+```
+@title: My Project
+@description: Sprint planning
+@view: board
+@status: To Do
+@status: In Progress [color:Ocean]
+@status: Done [color:Sage]
+@group: Frontend [color:#F67B45]
+@field: effort [type:select] [name:Effort] [options:XS,S,M,L,XL]
+
+* Design homepage
+  * Status: To Do
+  * Group: Frontend
+  * Priority: high
+  * DueDate: 2026-04-20
+  * Effort: L
+  * Checklist:
+    * [x] Wireframes
+    * [ ] Mockups
 ```
 
-Update the `url` and `latest_url` fields in `public/ext.json` to match your hosting URL.
+Legacy boards (pre-2.0 format with `# Header` syntax) are automatically migrated on first load.
 
 ---
 
@@ -145,93 +249,28 @@ Update the `url` and `latest_url` fields in `public/ext.json` to match your host
 ```
 src/
   components/
-    KanbanBoard.tsx      # Main board orchestrator and state management
-    KanbanLane.tsx       # Lane with context menu and color picker
-    KanbanCard.tsx       # Card with metadata badges
+    KanbanBoard.tsx      # Main orchestrator and state management
+    KanbanColumn.tsx     # Board view column with drag-and-drop
+    KanbanCard.tsx       # Card display with metadata badges
     CardModal.tsx        # Full card editor modal
-    BoardHeader.tsx      # Title, description, stats, view toggle
-    ListView.tsx         # List view with drag-and-drop groups
+    BoardHeader.tsx      # Header with view toggle, filters, search
+    BoardSidebar.tsx     # Sidebar with status sections
+    ListView.tsx         # List view with grouped sections
+    TableView.tsx        # Table view with inline editing
+    AnalyticsView.tsx    # Analytics dashboard (10 panels)
+    SchemaEditor.tsx     # Board settings modal
+    shared/              # Reusable components (Modal, Linkify, etc.)
   lib/
     sn-api.ts            # Standard Notes postMessage API layer
     markdown.ts          # Markdown serialization/deserialization
-    colors.ts            # Color palette and hex mapping
+    colors.ts            # 18-color muted palette and utilities
+    fields.ts            # Built-in field label system
+    grouping.ts          # Shared grouping logic
+    export.ts            # CSV, Markdown, JSON export
     dates.ts             # Due date formatting
   types/
     kanban.ts            # TypeScript interfaces
-  App.tsx                # Root component, SN integration, localStorage fallback
-  styles.css             # Complete theme-aware styling
-  main.tsx               # Entry point
-public/
-  ext.json               # SN plugin manifest
-docs/
-  PLUGIN-DEVELOPMENT-GUIDE.md   # How to build SN plugins from scratch
-  PROTOCOL-REFERENCE.md         # Full SN postMessage protocol spec
-  CSS-VARIABLES.md              # Complete SN theme variable reference
-  GOTCHAS.md                    # 20 critical pitfalls and best practices
 ```
-
----
-
-## Data Format
-
-Board data is stored as markdown inside the SN note, making it human-readable even outside the plugin:
-
-```markdown
-@title: My Project Board
-@description: Sprint planning
-@view: board
-
-# To Do [color:blue]
-* Design homepage
-  * Description: Create wireframes and mockups
-  * Label: Design
-  * LabelColor: purple
-  * DueDate: 2026-03-15
-  * Comments:
-    * Check competitor sites for inspiration
-    * Use Figma for mockups
-
-# In Progress [color:orange]
-* Build API endpoints
-  * Label: Backend
-  * LabelColor: green
-
-# Done [color:green]
-* Setup CI/CD pipeline
-```
-
----
-
-## Tech Stack
-
-| Technology | Purpose |
-|---|---|
-| [React](https://react.dev/) 19 | UI framework |
-| [TypeScript](https://www.typescriptlang.org/) 5.9 | Type safety |
-| [Vite](https://vite.dev/) 7 | Build tool and dev server |
-| [@hello-pangea/dnd](https://github.com/hello-pangea/dnd) | Drag-and-drop (maintained fork of react-beautiful-dnd) |
-| [uuid](https://github.com/uuidjs/uuid) | Card/lane ID generation |
-
----
-
-## Theme Support
-
-The editor automatically adapts to any Standard Notes theme by reading SN's injected CSS variables (`--sn-stylekit-*`). No manual theme switching needed.
-
-When running standalone (outside SN), it defaults to a dark theme.
-
-See [docs/CSS-VARIABLES.md](docs/CSS-VARIABLES.md) for the full variable reference.
-
----
-
-## Documentation
-
-Comprehensive documentation for building Standard Notes plugins is included in the `docs/` folder:
-
-- **[Plugin Development Guide](docs/PLUGIN-DEVELOPMENT-GUIDE.md)** — Step-by-step guide to building an SN editor plugin from scratch
-- **[Protocol Reference](docs/PROTOCOL-REFERENCE.md)** — Full postMessage protocol specification with flow diagrams
-- **[CSS Variables](docs/CSS-VARIABLES.md)** — Complete reference of 50+ SN theme CSS variables
-- **[Gotchas & Best Practices](docs/GOTCHAS.md)** — 20 critical pitfalls and how to avoid them
 
 ---
 
@@ -240,7 +279,7 @@ Comprehensive documentation for building Standard Notes plugins is included in t
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/my-feature`)
 3. Commit your changes
-4. Push to the branch (`git push origin feature/my-feature`)
+4. Push to the branch
 5. Open a Pull Request
 
 ---
@@ -248,9 +287,3 @@ Comprehensive documentation for building Standard Notes plugins is included in t
 ## License
 
 MIT
-
----
-
-## Credits
-
-Originally forked from [corvec/sn-kanban-editor](https://github.com/corvec/sn-kanban-editor). Rebuilt with modern React 19, full drag-and-drop, theme support, and mobile compatibility.
