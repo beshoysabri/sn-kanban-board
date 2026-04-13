@@ -21,7 +21,7 @@
   --kb-card-bg: var(--sn-stylekit-background-color, #1a1a1f);
   --kb-card-hover: var(--sn-stylekit-secondary-background-color, #27272a);
   --kb-border: var(--sn-stylekit-border-color, #27272a);
-  --kb-accent: var(--sn-stylekit-info-color, #6366f1);
+  --kb-accent: var(--sn-stylekit-info-color, #086DD6);
   --kb-danger: var(--sn-stylekit-danger-color, #ef4444);
   --kb-success: var(--sn-stylekit-success-color, #22c55e);
   --kb-warning: var(--sn-stylekit-warning-color, #eab308);
