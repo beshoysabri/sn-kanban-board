@@ -536,28 +536,28 @@ body.sn-embedded {
 }
 
 .date-overdue {
-  color: #fca5a5;
-  background: rgba(239, 68, 68, 0.15);
+  color: #dc2626;
+  background: rgba(239, 68, 68, 0.12);
 }
 
 .date-today {
-  color: #fbbf24;
-  background: rgba(234, 179, 8, 0.15);
+  color: #b45309;
+  background: rgba(234, 179, 8, 0.12);
 }
 
 .date-soon {
-  color: #fb923c;
-  background: rgba(249, 115, 22, 0.15);
+  color: #c2410c;
+  background: rgba(249, 115, 22, 0.12);
 }
 
 .date-upcoming {
-  color: #60a5fa;
-  background: rgba(59, 130, 246, 0.12);
+  color: #2563eb;
+  background: rgba(59, 130, 246, 0.10);
 }
 
 .date-future {
   color: var(--kb-muted);
-  background: rgba(161, 161, 170, 0.1);
+  background: rgba(161, 161, 170, 0.08);
 }
 
 /* Hover edit button on card */
@@ -3164,10 +3164,10 @@ body.sn-embedded {
   border-radius: 4px;
 }
 
-.card-priority.priority-low { color: #60a5fa; background: rgba(59, 130, 246, 0.15); }
-.card-priority.priority-medium { color: #fbbf24; background: rgba(234, 179, 8, 0.15); }
-.card-priority.priority-high { color: #fb923c; background: rgba(249, 115, 22, 0.15); }
-.card-priority.priority-critical { color: #fca5a5; background: rgba(239, 68, 68, 0.15); }
+.card-priority.priority-low { color: #2563eb; background: rgba(59, 130, 246, 0.12); }
+.card-priority.priority-medium { color: #b45309; background: rgba(234, 179, 8, 0.12); }
+.card-priority.priority-high { color: #c2410c; background: rgba(249, 115, 22, 0.12); }
+.card-priority.priority-critical { color: #dc2626; background: rgba(239, 68, 68, 0.12); }
 
 /* ========================================
    Checklist
