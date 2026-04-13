@@ -1,11 +1,28 @@
 # Kanban Board for Standard Notes
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue.svg)](https://www.typescriptlang.org/)
+[![React](https://img.shields.io/badge/React-19-61dafb.svg)](https://react.dev/)
+[![Standard Notes](https://img.shields.io/badge/Standard%20Notes-Plugin-6366f1.svg)](https://standardnotes.com)
+
 A powerful, fully-featured Kanban board editor plugin for [Standard Notes](https://standardnotes.com). Organize your notes as interactive boards with drag-and-drop cards, multiple views, custom fields, analytics, and full theme support.
 
-**Install URL:**
+### Quick Install
+
+Paste this URL in **Standard Notes > Preferences > Advanced Settings > Install Custom Plugin**:
+
 ```
 https://beshoysabri.github.io/sn-kanban-board/ext.json
 ```
+
+### Highlights
+
+- **4 Views** — Board, List, Table, Analytics
+- **Custom Fields** — 9 field types: text, select, multi-select, URL, media, date, number, checkbox, long text
+- **Schema Editor** — Full control over statuses, groups, sub-groups, fields, and layout
+- **Analytics Dashboard** — 10 interactive panels with priority matrix, status flow, and at-risk cards
+- **Search, Filter, Sort** — Real-time filtering across all views
+- **Mobile Ready** — Responsive design optimized for iPhone and Android
 
 ---
 
