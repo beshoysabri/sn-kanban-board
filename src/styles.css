@@ -1489,8 +1489,24 @@ body.sn-embedded {
   flex-shrink: 0;
 }
 
-.kb-icon-btn.kb-hamburger {
+.kb-menu-btn {
   display: none;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--kb-border);
+  background: transparent;
+  color: var(--kb-fg);
+  border-radius: var(--kb-radius-sm);
+  cursor: pointer;
+  transition: all var(--kb-transition);
+  flex-shrink: 0;
+}
+
+.kb-menu-btn:hover {
+  border-color: var(--kb-accent);
+  color: var(--kb-accent);
 }
 
 .kb-header-left {
@@ -2322,7 +2338,7 @@ body.sn-embedded {
   }
 
   /* Show hamburger */
-  .kb-hamburger {
+  .kb-menu-btn {
     display: flex;
   }
 
