@@ -385,7 +385,7 @@ export function KanbanBoard({ board, onChange }: Props) {
   const viewBoard = hasFilters ? { ...board, cards: filteredCards } : board;
 
   const renderView = () => {
-    if (board.meta.viewMode === 'analytics') return <AnalyticsView board={viewBoard} />;
+    if (board.meta.viewMode === 'analytics') return <AnalyticsView board={viewBoard} onCardClick={setEditingCard} />;
     if (board.meta.viewMode === 'table') {
       if (TableView) return <TableView board={viewBoard} onCardClick={setEditingCard} onUpdateCard={handleSaveCard} onMoveCard={handleMoveCard} />;
       return <div className="loading"><div className="loading-spinner" /></div>;
