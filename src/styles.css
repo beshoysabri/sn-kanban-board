@@ -2481,13 +2481,49 @@ body.sn-embedded {
     min-height: 36px;
   }
 
+  /* Hide subtitle on mobile */
+  .kb-subtitle-text {
+    display: none;
+  }
+
   /* Analytics responsive */
   .analytics-dashboard {
     grid-template-columns: 1fr;
+    padding: 12px;
   }
 
   .analytics-summary-row {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  /* Priority matrix scrollable on mobile */
+  .priority-matrix {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .priority-matrix-row-label {
+    min-width: 60px;
+    font-size: 9px;
+  }
+
+  .priority-matrix-cell {
+    min-width: 50px;
+  }
+
+  /* Status flow bar min-width per segment */
+  .status-flow-bar {
+    min-width: 300px;
+  }
+
+  .status-flow-label {
+    font-size: 9px;
+  }
+
+  /* View toggle smaller on mobile */
+  .kb-view-btn {
+    padding: 6px 8px;
+    min-height: 32px;
   }
 }
 
