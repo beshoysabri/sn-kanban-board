@@ -174,9 +174,8 @@ export function KanbanBoard({ board, onChange }: Props) {
       const srcParsed = parseDroppableId(source.droppableId);
       const destParsed = parseDroppableId(destination.droppableId);
 
-      // Find the card using FILTERED cards (matches what the view renders)
-      const viewSrcCards = filteredCards.filter(c => c[field] === srcParsed.colId);
-      const draggedCard = viewSrcCards[source.index];
+      // Find the card by draggableId (card ID) — avoids stale closure issues
+      const draggedCard = cards.find(c => c.id === result.draggableId);
       if (!draggedCard) return;
 
       // Remove from full array by ID
